@@ -1,0 +1,62 @@
+class TesterConfig -> store tester configuration
+class SystemConfig -> KVM available or not, QEMU path, Firecracker path, compiler versions
+class AppConfig -> generate from Kraftfile and from config.yaml
+class DefConfig
+   - generate Kraftfiles
+   - debug defconfig
+class BuildConfig -> generate from AppConfig
+   - build artifacts in KraftKit friendly directory
+class RunConfig
+   - create link to corresponding build directory
+   - run for GDB debugging
+class TestRunner -> generate from test.yaml, SystemConfig, BuildConfig, RunConfig
+   - use new directory for build
+   - use new directory for output
+   - build only or run only
+   - exclude certain builds or runs
+
+a basic set of scripts to always be generated, irrespective of compiler versions; they can be overwritten when generated
+
+tester.yaml -> TesterConfig
+tester.yaml, Kraftfile -> AppConfig
+generate_target_configs(TesterConfig, AppConfig, SystemConfig)
+    TargetConfig has a BuildConfig and a RunConfig object
+for each target_config:
+    generate_target_config_file() (config.yaml)
+    self.build_config.generate_build() (script + (optional) defconfig)
+    self.run_config.generate_run() (script)
+
+
+# Input Files
+
+../../tester.yaml -> global configuration file
+app-name/
+  - Kraftfile
+  - tester.yaml -> tester specific configuration (uses memory, uses networking)
+  - test.sh
+
+# Output Files
+
+  .test/
+    common.sh
+    1/
+      config.yaml
+      defconfig | Kraftfile -> optional
+      build
+      run
+      my-test-session/
+        build.log
+        run.log
+        test.log
+        result
+    2/
+      ...
+    3/
+      ...
+
+# Running
+
+script arguments:
+  generate configuration
+  list configurations
+  run configurations: all, certain ones, a single one, a list, selection

@@ -1,0 +1,14 @@
+UK_ROOT ?= {base}/unikraft
+UK_BUILD ?= {target_dir}/.unikraft/build
+UK_CONFIG ?= $(UK_BUILD)/.config
+UK_APP ?= {app_dir}
+LIBS_BASE ?= {base}/libs
+UK_LIBS ?= {libs}
+
+.PHONY: all defconfig
+
+all:
+	@$(MAKE) -C $(UK_ROOT) C=$(UK_CONFIG) A=$(UK_APP) L=$(UK_LIBS) O=$(UK_BUILD)
+
+$(MAKECMDGOALS):
+	@$(MAKE) -C $(UK_ROOT) C=$(UK_CONFIG) A=$(UK_APP) L=$(UK_LIBS) O=$(UK_BUILD) $(MAKECMDGOALS)
