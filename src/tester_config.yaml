@@ -1,0 +1,86 @@
+variants:
+  build:
+    arch:
+      - x86_64
+      - arm64
+    platform:
+      - xen
+      - qemu
+      - fc
+    build_tool:
+      - make
+      - kraft
+    bootloader:
+      - multiboot
+      - uefi
+    pie:
+      - on
+      - off
+    debug:
+      - none
+      - strace
+      - info
+      - err
+      - debug
+  run:
+    hypervisor:
+      - none
+      - xen
+      - kvm
+    run_tool:
+      - vmm
+      - kraft
+    rootfs:
+      - none
+      - initrd
+      - 9pfs
+    networking:
+      - none
+      - nat
+      - bridge
+      - tap
+exclude_variants:
+  - networking: nat
+    platform: fc
+  - networking: tap
+    platform: not fc
+  - bootloader: uefi
+    arch: not x86_64
+  - platform: fc
+    hypervisor: not kvm
+  - platform: xen
+    hypervisor: not xen
+  - platform: qemu
+    hypervisor: xen
+  - platform: fc
+    rootfs: 9pfs
+  - bootloader: uefi
+  - networking: nat
+    run_tool: kraft
+    platform: not qemu
+  - networking: tap
+    run_tool: kraft
+  - debug:
+      - info
+      - err
+      - debug
+  - pie: on
+tools:
+  compiler:
+    - system
+    #- arch: x86_64
+    #  type: gcc
+    #  path: ~/bin/gcc
+    #- arch: x86_64
+    #  type: clang
+    #  path: ~/bin/clang
+  vmm:
+    - system
+    #- arch: x86_64
+    #  type: qemu
+    #  path: ~/bin/qemu
+    #- arch: arm64
+    #  type: fc
+    #  path: ~/bin/fc
+source:
+  base: /home/razvan/orgs/unikraft/maintainer-tools/workdir
