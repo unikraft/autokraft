@@ -1,6 +1,7 @@
-import sys
-import yaml
 import itertools
+import sys
+
+import yaml
 
 
 class TesterConfig:
@@ -34,18 +35,24 @@ class TesterConfig:
         Return a list of all variants.
         """
 
-        build_variants = self.config['variants']['build']
-        run_variants = self.config['variants']['run']
-        build_configs = list(dict(zip(build_variants.keys(), values)) for values in itertools.product(*build_variants.values()))
-        run_configs = list(dict(zip(run_variants.keys(), values)) for values in itertools.product(*run_variants.values()))
+        build_variants = self.config["variants"]["build"]
+        run_variants = self.config["variants"]["run"]
+        build_configs = list(
+            dict(zip(build_variants.keys(), values))
+            for values in itertools.product(*build_variants.values())
+        )
+        run_configs = list(
+            dict(zip(run_variants.keys(), values))
+            for values in itertools.product(*run_variants.values())
+        )
 
         full_variants = []
         for b in build_configs:
             new_variant = {}
-            new_variant['build'] = b
-            new_variant['runs'] = []
+            new_variant["build"] = b
+            new_variant["runs"] = []
             for r in run_configs:
-                new_variant['runs'].append(r)
+                new_variant["runs"].append(r)
             full_variants.append(new_variant)
 
         return full_variants
@@ -60,8 +67,8 @@ class TesterConfig:
         {'networking': 'brigde', 'platform': 'fc'}
         """
 
-        variants = {**self.config['variants']['build'], **self.config['variants']['run']}
-        exclude_variants = self.config['exclude_variants']
+        variants = {**self.config["variants"]["build"], **self.config["variants"]["run"]}
+        exclude_variants = self.config["exclude_variants"]
         ret = []
 
         for e in exclude_variants:
@@ -109,7 +116,7 @@ class TesterConfig:
         for f in full_variants:
             # First check if entire build variant is to be excluded
             # (together # with all its run variants).
-            b = f['build']
+            b = f["build"]
             for e in exclude_variants:
                 excluded = True
                 for k, v in e.items():
@@ -127,7 +134,7 @@ class TesterConfig:
 
             # Check for run variants to be excluded.
             run_variants = []
-            for r in f['runs']:
+            for r in f["runs"]:
                 linear_variant = {**b, **r}
                 excluded = True
                 for e in exclude_variants:
@@ -141,10 +148,7 @@ class TesterConfig:
                 if excluded:
                     continue
                 run_variants.append(r)
-            ret_variants.append({
-                'build': b,
-                'runs': run_variants
-                })
+            ret_variants.append({"build": b, "runs": run_variants})
 
         return ret_variants
 
@@ -162,13 +166,10 @@ class TesterConfig:
 
         compilers = []
 
-        for c in self.config['tools']['compiler']:
+        for c in self.config["tools"]["compiler"]:
             if isinstance(c, dict):
-                if c['arch'] == arch:
-                    compilers.append({
-                        "type": c['type'],
-                        "path": c['path']
-                        })
+                if c["arch"] == arch:
+                    compilers.append({"type": c["type"], "path": c["path"]})
                 continue
             if c == "system":
                 compilers += sys_compilers
@@ -188,20 +189,19 @@ class TesterConfig:
 
         vmms = []
 
-        for v in self.config['tools']['vmm']:
+        for v in self.config["tools"]["vmm"]:
             if isinstance(v, dict):
-                if v['arch'] == arch and v['type'] == plat:
-                    vmms.append({
-                        "platform": v['type'],
-                        "path": v['path']
-                        })
+                if v["arch"] == arch and v["type"] == plat:
+                    vmms.append({"platform": v["type"], "path": v["path"]})
                 continue
             if v == "system":
                 vmms += sys_vmms
 
         return vmms
 
-    def generate_target_configs(self, plat, arch, sys_arch, sys_vmms, sys_compilers, build_tools, run_tools):
+    def generate_target_configs(
+        self, plat, arch, sys_arch, sys_vmms, sys_compilers, build_tools, run_tools
+    ):
         """Generate configurations for target.
 
         The target is defined by the platform, architecture, system VMMs,
@@ -215,9 +215,11 @@ class TesterConfig:
 
         for v in self.variants:
             for b in build_tools:
-                if not (plat == v['build']['platform'] and \
-                        arch == v['build']['arch'] and \
-                        b == v['build']['build_tool']):
+                if not (
+                    plat == v["build"]["platform"]
+                    and arch == v["build"]["arch"]
+                    and b == v["build"]["build_tool"]
+                ):
                     continue
 
                 vmm_list = self._generate_vmms(plat, arch, sys_vmms)
@@ -227,31 +229,33 @@ class TesterConfig:
                 # Currently, Kraft can only build using GCC.
                 # So, irrespective of the available compilers, generate only
                 # one Kraft build target.
-                if b == 'kraft':
+                if b == "kraft":
                     comp_list = [{"type": "gcc", "path": "default"}]
                 for comp in comp_list:
                     _config = {}
-                    _config['build'] = v['build'].copy()
-                    _config['base'] = self.config['source']['base']
+                    _config["build"] = v["build"].copy()
+                    _config["base"] = self.config["source"]["base"]
 
-                    _config['build']['compiler'] = comp
+                    _config["build"]["compiler"] = comp
 
                     if not vmm_list:
-                        _config['run'] = {}
-                        _config['run']['vmm'] = None
-                        _config['run']['runs'] = []
+                        _config["run"] = {}
+                        _config["run"]["vmm"] = None
+                        _config["run"]["runs"] = []
                         self.target_configs.append(_config)
                         continue
 
                     for vmm in vmm_list:
-                        _config['run'] = {}
-                        _config['run']['vmm'] = vmm
-                        _config['run']['runs'] = []
-                        for r in v['runs']:
+                        _config["run"] = {}
+                        _config["run"]["vmm"] = vmm
+                        _config["run"]["runs"] = []
+                        for r in v["runs"]:
                             for rt in run_tools:
-                                if rt == r['run_tool']:
-                                    if r['hypervisor'] == 'none' or (r['hypervisor'] != 'none' and arch == sys_arch):
-                                        _config['run']['runs'].append(r)
+                                if rt == r["run_tool"]:
+                                    if r["hypervisor"] == "none" or (
+                                        r["hypervisor"] != "none" and arch == sys_arch
+                                    ):
+                                        _config["run"]["runs"].append(r)
                         self.target_configs.append(_config)
 
     def get_target_configs(self):

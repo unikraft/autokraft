@@ -1,9 +1,12 @@
 import os
-import yaml
 import subprocess
 import sys
-from tester_config import TesterConfig
+
+import yaml
+
 from constants import SCRIPT_DIR
+from tester_config import TesterConfig
+
 
 class AppConfig:
     """Store application configuration.
@@ -20,8 +23,8 @@ class AppConfig:
 
         Return true or false.
         """
-        
-        return self.config['template'] != None
+
+        return self.config["template"] != None
 
     def has_einitrd(self):
         """Check if application is conifgured to use an embedded initial
@@ -56,7 +59,7 @@ class AppConfig:
         Return true or false.
         """
 
-        return self.config['unikraft'] != None
+        return self.config["unikraft"] != None
 
     def is_example(self):
         """Check if application is an example.
@@ -88,7 +91,7 @@ class AppConfig:
         Return true or false.
         """
 
-        return self.config['networking']
+        return self.config["networking"]
 
     def has_rootfs(self):
         """Check if application has a root filesystem.
@@ -98,7 +101,7 @@ class AppConfig:
         Return true or false.
         """
 
-        return self.config['rootfs']
+        return self.config["rootfs"]
 
     def _get_targets_from_runtime(self):
         """Get targets (as pair of plat and arch) from runtime package.
@@ -111,10 +114,15 @@ class AppConfig:
         pairs.
         """
 
-        kraft_proc = subprocess.Popen(["kraft", "pkg", "info", "--log-level", "panic", self.config["runtime"], "-o", "json"], stdout=subprocess.PIPE)
-        jq_proc = subprocess.Popen(["jq", "-r", ".[] | .plat"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        kraft_output,_ = kraft_proc.communicate()
-        jq_out,_ = jq_proc.communicate(kraft_output)
+        kraft_proc = subprocess.Popen(
+            ["kraft", "pkg", "info", "--log-level", "panic", self.config["runtime"], "-o", "json"],
+            stdout=subprocess.PIPE,
+        )
+        jq_proc = subprocess.Popen(
+            ["jq", "-r", ".[] | .plat"], stdin=subprocess.PIPE, stdout=subprocess.PIPE
+        )
+        kraft_output, _ = kraft_proc.communicate()
+        jq_out, _ = jq_proc.communicate(kraft_output)
 
         targets = []
         for full_plat in jq_out.decode().split("\n"):
@@ -122,7 +130,7 @@ class AppConfig:
                 plat = full_plat.split("/")[0]
                 arch = full_plat.split("/")[1]
                 targets.append((plat, arch))
-            self.config['targets'] = targets
+            self.config["targets"] = targets
 
     def _parse_user_config(self, user_config_file):
         """Parse config.yaml file.
@@ -146,7 +154,9 @@ class AppConfig:
             self.config["test_dir"] = data["test_dir"]
 
         if not "memory" in data.keys():
-            print(f"Error: 'memory' attribute is not defined in {user_config_file}'", file=sys.stderr)
+            print(
+                f"Error: 'memory' attribute is not defined in {user_config_file}'", file=sys.stderr
+            )
             sys.exit(1)
         else:
             self.config["memory"] = data["memory"]
@@ -158,7 +168,7 @@ class AppConfig:
             self.config["exposed_port"] = data["exposed_port"]
             self.config["public_port"] = data["public_port"]
 
-    def _parse_app_config(self, app_config_file):        
+    def _parse_app_config(self, app_config_file):
         """Parse Kraftfile.
 
         Populate corresponding entries in self.config.
@@ -174,12 +184,19 @@ class AppConfig:
             if isinstance(data["unikraft"], dict):
                 if "kconfig" in data["unikraft"].keys():
                     self.config["unikraft"]["kconfig"] = data["unikraft"]["kconfig"]
-                    if "CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD" in self.config["unikraft"]["kconfig"].keys() and \
-                            self.config["unikraft"]["kconfig"]["CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD"] == "y":
+                    if (
+                        "CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD"
+                        in self.config["unikraft"]["kconfig"].keys()
+                        and self.config["unikraft"]["kconfig"][
+                            "CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD"
+                        ]
+                        == "y"
+                    ):
                         self.einitrd = True
-                        self.config["unikraft"]["kconfig"].pop("CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD")
+                        self.config["unikraft"]["kconfig"].pop(
+                            "CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD"
+                        )
                         self.config["unikraft"]["kconfig"].pop("CONFIG_LIBVFSCORE_AUTOMOUNT_CI")
-
 
         if not "template" in data.keys():
             self.config["template"] = None
@@ -206,25 +223,25 @@ class AppConfig:
         else:
             self.config["runtime"] = data["runtime"]
 
-        if not 'targets' in data.keys():
-            self.config['targets'] = None
+        if not "targets" in data.keys():
+            self.config["targets"] = None
             if self.is_example():
                 self._get_targets_from_runtime()
         else:
             targets = []
-            for t in data['targets']:
+            for t in data["targets"]:
                 plat = t.split("/")[0]
                 arch = t.split("/")[1]
                 targets.append((plat, arch))
-            self.config['targets'] = targets
+            self.config["targets"] = targets
 
         if not "cmd" in data.keys():
-            self.config['cmd'] = None
+            self.config["cmd"] = None
         else:
             self.config["cmd"] = " ".join(c for c in data["cmd"])
 
         if not "rootfs" in data.keys():
-            self.config['rootfs'] = None
+            self.config["rootfs"] = None
         else:
             self.config["rootfs"] = data["rootfs"]
 
@@ -244,12 +261,12 @@ class AppConfig:
         directory. It is used to initialize the filesystem before other build
         or run steps.
         """
-         
-        if self.config['test_dir']:
-            test_dir = os.path.abspath(self.user_config['test_dir'])
+
+        if self.config["test_dir"]:
+            test_dir = os.path.abspath(self.user_config["test_dir"])
         else:
-            test_dir = os.path.abspath('.tests')
-        if self.config['rootfs']:
+            test_dir = os.path.abspath(".tests")
+        if self.config["rootfs"]:
             rootfs = os.path.join(os.getcwd(), self.config["rootfs"])
         else:
             rootfs = ""
@@ -261,7 +278,7 @@ class AppConfig:
         name = self.config["name"]
 
         if self.has_template():
-            app_dir = os.path.join(os.path.join(base, "apps"), self.config['template'])
+            app_dir = os.path.join(os.path.join(base, "apps"), self.config["template"])
         else:
             app_dir = os.getcwd()
 
@@ -282,11 +299,10 @@ class AppConfig:
         Parse application config (`Kraftfile`) and user config (`config.yaml`)
         and populate all entries in the self.config dictionary.
         """
-        
+
         self.config = {}
         self._parse_user_config(user_config)
         self._parse_app_config(app_config)
 
     def __str__(self):
         return str(self.config)
-

@@ -1,13 +1,15 @@
 import os
 import shutil
-from constants import TESTS_FOLDER, SCRIPT_DIR
+
+from constants import SCRIPT_DIR, TESTS_FOLDER
+
 
 def copy_common():
     """Copy all common scripts to the test directory.
 
     These scripts are to be used in the build, run and test phases.
     """
-    
+
     base = os.path.abspath(TESTS_FOLDER)
     dest = os.path.join(base, "common")
     src = os.path.join(os.getcwd(), SCRIPT_DIR, "common")
@@ -20,5 +22,8 @@ def copy_common():
         if os.path.isdir(src_path):
             shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
         else:
-            if not os.path.exists(dest_path) or os.stat(src_path).st_mtime > os.stat(dest_path).st_mtime:
+            if (
+                not os.path.exists(dest_path)
+                or os.stat(src_path).st_mtime > os.stat(dest_path).st_mtime
+            ):
                 shutil.copy2(src_path, dest_path)
