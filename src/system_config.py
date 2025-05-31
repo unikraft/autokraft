@@ -1,3 +1,7 @@
+"""
+This module provides the SystemConfig class to extract system configuration information.
+"""
+
 import platform
 import re
 import shutil

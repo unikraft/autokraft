@@ -1,3 +1,7 @@
+"""
+This module is the main entry point for the testing framework.
+"""
+
 import os
 import sys
 

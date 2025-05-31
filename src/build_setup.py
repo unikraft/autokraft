@@ -1,3 +1,7 @@
+"""
+THis module provides the BuildSetup class, which manages the build setup.
+"""
+
 import os
 
 from constants import SCRIPT_DIR

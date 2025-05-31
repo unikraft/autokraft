@@ -1,3 +1,7 @@
+"""
+This module defines the AppConfig class, which is used to extract and store application configuration.
+"""
+
 import os
 import subprocess
 import sys

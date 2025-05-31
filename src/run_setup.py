@@ -1,3 +1,7 @@
+"""
+This module provides the RunSetup class to manage the run setup for applications.
+"""
+
 import os
 
 from constants import SCRIPT_DIR

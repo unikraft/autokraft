@@ -1,3 +1,7 @@
+"""
+This module provides the TargetSetup class to create setups for targets.
+"""
+
 import os
 
 import yaml
