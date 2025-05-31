@@ -1,3 +1,7 @@
+"""
+This module provide the TesterConfig class to retrive and store tester configurations.
+"""
+
 import itertools
 import sys
 

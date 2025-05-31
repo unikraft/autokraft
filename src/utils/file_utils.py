@@ -1,3 +1,7 @@
+"""
+This module is responsible for copying common template scripts to the test directory.
+"""
+
 import os
 import shutil
 

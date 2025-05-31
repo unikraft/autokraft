@@ -1,3 +1,7 @@
+"""
+This module provides the method to clean up the test folder.
+"""
+
 import os
 import shutil
 
