@@ -1,5 +1,6 @@
 """
-This module defines the AppConfig class, which is used to extract and store application configuration.
+This module defines the AppConfig class, which is used to extract and store application 
+configuration.
 """
 
 import os
@@ -28,7 +29,7 @@ class AppConfig:
         Return true or false.
         """
 
-        return self.config["template"] != None
+        return self.config["template"] is not None
 
     def has_einitrd(self):
         """Check if application is conifgured to use an embedded initial
@@ -63,7 +64,7 @@ class AppConfig:
         Return true or false.
         """
 
-        return self.config["unikraft"] != None
+        return self.config["unikraft"] is not  None
 
     def is_example(self):
         """Check if application is an example.
@@ -267,6 +268,7 @@ class AppConfig:
         """
 
         if self.config["test_dir"]:
+            # shank: Instance of 'AppConfig' has no 'user_config' member
             test_dir = os.path.abspath(self.user_config["test_dir"])
         else:
             test_dir = os.path.abspath(".tests")

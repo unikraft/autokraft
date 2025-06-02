@@ -124,9 +124,9 @@ class SystemConfig:
         """
 
         ret_list = []
-        if not arch in self.vmms.keys():
+        if not arch in self.vmms:
             return []
-        if not plat in self.vmms[arch].keys():
+        if not plat in self.vmms[arch]:
             return []
         for v in self.vmms[arch][plat]:
             ret_list.append({"type": plat, "path": v})

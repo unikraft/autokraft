@@ -35,7 +35,7 @@ class TargetSetup:
             base = os.path.abspath(app_config.user_config["test_dir"])
         else:
             base = os.path.abspath(".tests")
-        self.dir = os.path.join(base, "{:05d}".format(self.id))
+        self.dir = os.path.join(base, f"{self.id:05d}")
         self.build_config = BuildSetup(self.dir, self.config["build"], self.config, app_config)
         self.run_configs = []
         idx = 1
@@ -48,7 +48,7 @@ class TargetSetup:
                 continue
             if r["rootfs"] == "none" and not app_config.has_einitrd() and app_config.has_rootfs():
                 continue
-            run_dir = os.path.join(self.dir, "run-{:02d}".format(idx))
+            run_dir = os.path.join(self.dir, f"run-{idx:02d}")
             idx += 1
             self.run_configs.append(
                 RunSetup(
@@ -69,7 +69,7 @@ class TargetSetup:
         # Create directory.
         os.mkdir(self.dir, mode=0o755)
         # Generate config.yaml.
-        with open(os.path.join(self.dir, "config.yaml"), "w") as outfile:
+        with open(os.path.join(self.dir, "config.yaml"), "w", encoding="utf-8") as outfile:
             outfile.write(f"base: {self.config['base']}\n")
             yaml.dump(self.config["build"], outfile, default_flow_style=False)
             if self.config["run"]["vmm"]:
@@ -77,6 +77,6 @@ class TargetSetup:
         self.build_config.generate()
         for r in self.run_configs:
             os.mkdir(r.dir, mode=0o755)
-            with open(os.path.join(r.dir, "config.yaml"), "w") as outfile:
+            with open(os.path.join(r.dir, "config.yaml"), "w", encoding="utf-8") as outfile:
                 yaml.dump(r.config, outfile, default_flow_style=False)
             r.generate()

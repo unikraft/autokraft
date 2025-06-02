@@ -36,7 +36,7 @@ class BuildSetup:
                 os.path.join(os.path.join(self.dir, ".unikraft"), "bin"), "kernel"
             )
 
-    def get_build_tools(plat, arch):
+    def get_build_tools(self, plat, arch):
         """Get the list the potential build tools."""
 
         return ["make", "kraft"]
@@ -77,9 +77,9 @@ class BuildSetup:
             if "libraries" in self.app_config.config.keys():
                 for l in self.app_config.config["libraries"].keys():
                     if l.startswith("lib"):
-                        stream.write("CONFIG_{}=y\n".format(l.replace("-", "_").upper()))
+                        stream.write(f"CONFIG_{l.replace('-', '_').upper()}=y\n")
                     else:
-                        stream.write("CONFIG_LIB{}=y\n".format(l.replace("-", "_").upper()))
+                        stream.write(f"CONFIG_LIB{l.replace('-', '_').upper()}=y\n")
                     for k, v in self.app_config.config["libraries"][l]["kconfig"].items():
                         stream.write(f"{k}={v}\n")
 
@@ -159,7 +159,8 @@ class BuildSetup:
                         stream.write("    CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD: 'y'\n")
                         stream.write("    CONFIG_LIBVFSCORE_AUTOMOUNT_CI: 'y'\n")
                         # einitrd_cpio_path = os.path.join(self.dir, "initrd.cpio")
-                        # stream.write(f"    CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD_PATH: '{einitrd_cpio_path}'\n")
+                        # stream.write(f"    CONFIG_LIBVFSCORE_AUTOMOUNT_EINITRD_PATH: \
+                        #  '{einitrd_cpio_path}'\n")
                     else:
                         stream.write("    CONFIG_LIBVFSCORE_AUTOMOUNT_CI_EINITRD: 'n'\n")
                         stream.write("    CONFIG_LIBVFSCORE_AUTOMOUNT_CI: 'n'\n")
@@ -178,7 +179,7 @@ class BuildSetup:
                     stream.write(f"  {l}:\n")
                     stream.write(f"    source: {lib_path}\n")
                     if self.app_config.config["libraries"][l]["kconfig"]:
-                        stream.write(f"    kconfig:\n")
+                        stream.write("    kconfig:\n")
                         for k, v in self.app_config.config["libraries"][l]["kconfig"].items():
                             if isinstance(v, str):
                                 v = f'"{v}"'
