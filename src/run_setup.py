@@ -29,7 +29,7 @@ class RunSetup:
         self.app_config = app_config
         self.sys_arch = sys_arch
 
-    def get_run_tools(plat, arch):
+    def get_run_tools(self, plat, arch):
         """Get the list the potential run tool types."""
 
         return ["vmm", "kraft"]
@@ -100,8 +100,8 @@ class RunSetup:
 
         if self.app_config.has_einitrd() or not self.app_config.has_rootfs():
             if self.config["networking"] == "none":
-                self._generate_fc_config_from_template(f"tpl_run_firecracker_nonet_noinitrd.json")
-                self._generate_run_script_from_template(f"tpl_run_firecracker_nonet_noinitrd.sh")
+                self._generate_fc_config_from_template("tpl_run_firecracker_nonet_noinitrd.json")
+                self._generate_run_script_from_template("tpl_run_firecracker_nonet_noinitrd.sh")
             else:
                 self._generate_fc_config_from_template(
                     f"tpl_run_firecracker_net_{self.config['networking']}_noinitrd.json"
@@ -111,8 +111,8 @@ class RunSetup:
                 )
         else:
             if self.config["networking"] == "none":
-                self._generate_fc_config_from_template(f"tpl_run_firecracker_nonet_initrd.json")
-                self._generate_run_script_from_template(f"tpl_run_firecracker_nonet_initrd.sh")
+                self._generate_fc_config_from_template("tpl_run_firecracker_nonet_initrd.json")
+                self._generate_run_script_from_template("tpl_run_firecracker_nonet_initrd.sh")
             else:
                 self._generate_fc_config_from_template(
                     f"tpl_run_firecracker_net_{self.config['networking']}_initrd.json"
@@ -126,14 +126,14 @@ class RunSetup:
 
         if self.app_config.has_einitrd() or not self.app_config.has_rootfs():
             if self.config["networking"] == "none":
-                self._generate_run_script_from_template(f"tpl_run_qemu_net_nat_noinitrd.sh")
+                self._generate_run_script_from_template("tpl_run_qemu_net_nat_noinitrd.sh")
             else:
                 self._generate_run_script_from_template(
                     f"tpl_run_qemu_net_{self.config['networking']}_noinitrd.sh"
                 )
         else:
             if self.config["networking"] == "none":
-                self._generate_run_script_from_template(f"tpl_run_qemu_net_nat_initrd.sh")
+                self._generate_run_script_from_template("tpl_run_qemu_net_nat_initrd.sh")
             else:
                 self._generate_run_script_from_template(
                     f"tpl_run_qemu_net_{self.config['networking']}_initrd.sh"
@@ -148,7 +148,7 @@ class RunSetup:
         """Generate Kraft run script (`run`)."""
 
         if self.config["networking"] == "none":
-            self._generate_run_script_from_template(f"tpl_run_kraft_nonet.sh")
+            self._generate_run_script_from_template("tpl_run_kraft_nonet.sh")
         else:
             self._generate_run_script_from_template(
                 f"tpl_run_kraft_net_{self.config['networking']}.sh"
