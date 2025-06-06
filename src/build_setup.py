@@ -35,8 +35,9 @@ class BuildSetup:
             self.kernel_path = os.path.join(
                 os.path.join(os.path.join(self.dir, ".unikraft"), "bin"), "kernel"
             )
-
-    def get_build_tools(self, plat, arch):
+    
+    @staticmethod
+    def get_build_tools(plat, arch):
         """Get the list the potential build tools."""
 
         return ["make", "kraft"]
@@ -228,13 +229,15 @@ class BuildSetup:
     def _get_compiler_vars(self):
         """Generate compiler variables, typically CROSS_COMPILE and COMPILER."""
 
+        cross_compile, compiler = "", ""
         if self.config["arch"] == "x86_64":
-            return ("", self.config["compiler"]["path"])
+            compiler = self.config["compiler"]["path"]
         if self.config["arch"] == "arm64":
             idx = self.config["compiler"]["path"].find(self.config["compiler"]["type"])
             cross_compile = f"export CROSS_COMPILE={self.config['compiler']['path'][0:idx]}"
             compiler = self.config["compiler"]["path"][idx:]
-            return (cross_compile, compiler)
+        
+        return (cross_compile, compiler)
 
     def _generate_build_make(self):
         """Generate build script for Make-based build."""

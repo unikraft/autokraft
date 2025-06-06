@@ -29,7 +29,8 @@ class RunSetup:
         self.app_config = app_config
         self.sys_arch = sys_arch
 
-    def get_run_tools(self, plat, arch):
+    @staticmethod
+    def get_run_tools(plat, arch):
         """Get the list the potential run tool types."""
 
         return ["vmm", "kraft"]
