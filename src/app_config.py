@@ -273,7 +273,7 @@ class AppConfig:
         else:
             test_dir = os.path.abspath(".tests")
         if self.config["rootfs"]:
-            rootfs = os.path.join(os.getcwd(), self.config["rootfs"])
+            rootfs = os.path.join(os.getcwd(), ".app", self.config["rootfs"])
         else:
             rootfs = ""
         init_dir = os.getcwd()
@@ -299,7 +299,7 @@ class AppConfig:
             stream.write(content)
         os.chmod(os.path.join(test_dir, "app_fs_init.sh"), 0o755)
 
-    def __init__(self, app_config="Kraftfile", user_config="config.yaml"):
+    def __init__(self, app_config=".app/Kraftfile", user_config="config.yaml"):
         """Initialize application configuration.
 
         Parse application config (`Kraftfile`) and user config (`config.yaml`)

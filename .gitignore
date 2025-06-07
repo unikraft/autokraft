@@ -221,3 +221,5 @@ src/utils/__pycache__
 Kraftfile
 server.py
 
+.app/
+
