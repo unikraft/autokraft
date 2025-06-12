@@ -1,0 +1,139 @@
+Testing Framework Design Documentation
+===================================
+
+1. Overview
+-----------
+The testing framework is designed to automate the testing of unikernel applications across different architectures, 
+platforms, and configurations. It generates build and run configurations based on the application requirements and 
+system capabilities.
+
+2. Core Components
+-----------------
+2.1. Configuration Management
+    - TesterConfig: Manages global testing framework configuration
+    - AppConfig: Handles application-specific configuration
+    - SystemConfig: Extracts and manages system capabilities
+    
+2.2. Setup Management
+    - BuildSetup: Manages build configuration and scripts
+    - RunSetup: Handles run configuration and scripts
+    - TargetSetup: Coordinates build and run setups for a target
+
+3. Configuration Hierarchy
+-------------------------
+3.1. Global Configuration (tester_config.yaml)
+    - Defines available variants for build and run
+    - Specifies excluded variant combinations
+    - Configures tools (compilers, VMMs)
+    - Sets source base directory
+
+3.2. Application Configuration (Kraftfile)
+    - Defines application name and type
+    - Specifies build targets
+    - Configures libraries and their settings
+    - Sets runtime options
+    - Configures filesystem requirements
+
+3.3. User Configuration (config.yaml)
+    - Sets networking options
+    - Configures memory requirements
+    - Defines test directory
+    - Sets port configurations
+
+4. Component Details
+-------------------
+4.1. TesterConfig
+    - Reads global configuration
+    - Generates valid configuration variants
+    - Handles excluded variants
+    - Manages tool configurations
+
+4.2. AppConfig
+    - Parses Kraftfile and config.yaml
+    - Determines application type (kernel/example)
+    - Manages filesystem requirements
+    - Handles networking configuration
+
+4.3. SystemConfig
+    - Detects system architecture
+    - Identifies available VMMs
+    - Discovers compiler installations
+    - Determines hypervisor support
+
+4.4. BuildSetup
+    - Generates build scripts
+    - Creates configuration files (defconfig, Kraftfile)
+    - Handles compiler settings
+    - Manages build tool specifics (make/kraft)
+
+4.5. RunSetup
+    - Creates run scripts
+    - Configures VMM settings
+    - Manages networking options
+    - Handles filesystem mounting
+
+4.6. TargetSetup
+    - Coordinates build and run configurations
+    - Manages target-specific directories
+    - Generates target configuration files
+
+5. Workflow
+-----------
+5.1. Initialization
+    1. Parse tester configuration
+    2. Load application configuration
+    3. Detect system capabilities
+
+5.2. Configuration Generation
+    1. Generate valid variant combinations
+    2. Filter out excluded variants
+    3. Match variants with system capabilities
+
+5.3. Setup Creation
+    1. Create target setups
+    2. Generate build configurations
+    3. Create run configurations
+    4. Setup filesystem requirements
+
+6. File Structure
+----------------
+6.1. Configuration Files
+    - tester_config.yaml: Global framework configuration
+    - config.yaml: User/application specific settings
+    - Kraftfile: Application build configuration
+
+6.2. Generated Files
+    - Build scripts (build, build-einitrd)
+    - Run scripts (run)
+    - Configuration files (defconfig, config.json)
+    - Filesystem initialization scripts
+
+7. Extension Points
+------------------
+7.1. Adding New Platforms
+    - Extend platform variants in tester_config.yaml
+    - Implement platform-specific build/run handlers
+
+7.2. New Tool Support
+    - Add tool configurations to tester_config.yaml
+    - Implement tool-specific template generation
+
+7.3. Custom Configurations
+    - Define new variant combinations
+    - Add configuration exclusion rules
+
+8. Limitations
+-------------
+- Requires specific system tools (kraft, compilers, VMMs)
+- Platform-specific constraints on variant combinations
+- Architecture-dependent tool requirements
+- Limited to supported hypervisor configurations
+
+9. Future Improvements
+---------------------
+- Dynamic variant validation
+- Enhanced error handling
+- Parallel build support
+- Extended platform support
+- Improved configuration validation
+- Test result collection and analysis
