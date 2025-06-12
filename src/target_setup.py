@@ -40,9 +40,9 @@ class TargetSetup:
         self.run_configs = []
         idx = 1
         for r in self.config["run"]["runs"]:
-            if r["networking"] == "none" and app_config.config["networking"] == True:
+            if r["networking"] == "none" and app_config.config["networking"] is True:
                 continue
-            if r["networking"] != "none" and app_config.config["networking"] == False:
+            if r["networking"] != "none" and app_config.config["networking"] is False:
                 continue
             if r["rootfs"] != "none" and (app_config.has_einitrd() or not app_config.has_rootfs()):
                 continue
