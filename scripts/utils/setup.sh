@@ -10,3 +10,5 @@ cp -r "$dir_path" .
 
 folder_name=$(basename "$dir_path")
 mv "$folder_name" .app
+
+python3 src/utils/port_extractor.py
