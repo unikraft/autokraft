@@ -4,6 +4,7 @@ This module is the main entry point for the testing framework.
 
 import os
 import sys
+import json
 
 from app_config import AppConfig
 from build_setup import BuildSetup
@@ -35,6 +36,10 @@ def generate_target_configs(tester_config, app_config, system_config):
         )
 
     targets = []
+    with open("target_configs.json", "w") as f:
+        json.dump(str(tester_config.get_target_configs()), f, indent=4)
+    pretty = json.dumps(str(tester_config.get_target_configs()), indent=4)
+    print(pretty)
     for config in tester_config.get_target_configs():
         t = TargetSetup(config, app_config, system_config)
         targets.append(t)
@@ -67,8 +72,14 @@ def main():
         copy_common()
 
         targets = generate_target_configs(t, a, s)
+        with open("target_setup.json", "w") as f:
+            json.dump(str(t), f, indent=4)
         for t in targets:
             t.generate()
+
+        for target_config in targets:
+            runner = TestRunner(target_config)
+            runner.run_test()
 
     finally:
         # cleanup_folder()

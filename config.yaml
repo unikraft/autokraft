@@ -1,3 +1,6 @@
 memory: 256
-exposed_port: 8000
+netwoeking: true
+exposed_port: 8080
 public_port: 8080
+testing_command: "curl localhost:8080/?q=awesome_travis"
+testing_command_timeout: 10
