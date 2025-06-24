@@ -5,10 +5,15 @@ This module provides the TargetSetup class to create setups for targets.
 import os
 
 import yaml
+import logging
 
 from build_setup import BuildSetup
 from run_setup import RunSetup
 
+logging.basicConfig(
+    level=logging.INFO,  # Set the logging level
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
+)
 
 class TargetSetup:
     """Create setup for target.
@@ -49,6 +54,7 @@ class TargetSetup:
             if r["rootfs"] == "none" and not app_config.has_einitrd() and app_config.has_rootfs():
                 continue
             run_dir = os.path.join(self.dir, f"run-{idx:02d}")
+            # logging.info(f"\tCreating run setup no {idx}...")
             idx += 1
             self.run_configs.append(
                 RunSetup(

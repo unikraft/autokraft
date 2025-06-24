@@ -3,9 +3,14 @@ THis module provides the BuildSetup class, which manages the build setup.
 """
 
 import os
+import logging
 
 from constants import SCRIPT_DIR
 
+logging.basicConfig(
+    level=logging.INFO,  # Set the logging level
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
+)
 
 class BuildSetup:
     """Manage build setup.
@@ -21,6 +26,7 @@ class BuildSetup:
         Make use of the target configuration and the application configuration.
         """
 
+        # logging.info(f"Initializing BuildSetup {base_dir}...")
         self.dir = base_dir
         self.config = config
         self.target_config = target_config
