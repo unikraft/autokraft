@@ -61,13 +61,6 @@ class TestRunner:
         """
         run_script_path = os.path.join(run_target_dir, "run")
         run_log_path = os.path.join(run_target_dir, "run.log")
-        curl_log_path = os.path.join(run_target_dir, "run_curl.log")
-
-        with open("config.yaml", "r") as f:
-            app_config = yaml.safe_load(f)
-
-        networking_enabled = app_config.get("networking", False)
-        curl_command = app_config.get("testing_command", "curl http://localhost:8080")
 
         # Start run script in background
         with open(run_log_path, "w") as run_log_file:
@@ -78,28 +71,20 @@ class TestRunner:
                 stderr=run_log_file,
             )
 
-        print("Sleep staerted for 8 seconds to allow unikernel to start")
-        time.sleep(5)
+        print("Sleep staerted for 3 seconds to allow unikernel to start")
+        time.sleep(3)
 
-        # If networking is enabled, send a curl request
-        if networking_enabled:
-            try:
-                print(f"Sending curl request: {curl_command} with timeout of 7 seconds")
-                curl_result = run(curl_command, capture_output=True, text=True, timeout=7)
-                with open(curl_log_path, "w") as f:
-                    f.write(curl_result.stdout)
-                    f.write(curl_result.stderr)
-            except Exception as e:
-                with open(curl_log_path, "w") as f:
-                    f.write(f"[✗] Curl request failed: {e}")
-                process.terminate()
-                return False
+        is_run_success = self._test_target_run(
+            self.target.build_config.dir
+        )  # TODO: This is required to be done symultaniously.
 
         # Wait for the unikernel to finish or timeout
         try:
-            process.wait(timeout=10)
+            process.wait(timeout=2)
         except Exception as e:
             process.terminate()
+
+        return is_run_success
 
     def _is_build_successful(self, log_path: str) -> bool:
         """
@@ -135,15 +120,59 @@ class TestRunner:
         ):
             return True
 
-        return True  # TODO: Updated it to True for now, as we are not checking the build logs yet
+        return False
 
-    def _test_target_run(self, run_target_directory: str) -> None:
+    def _test_target_run(self, run_target_dir: str) -> bool:
         """
         Test the target run.
 
         This method will execute the test configurations for the target.
+
+        Args:
+            run_target_dir (str): The directory where the target is running.
+        Returns:
+            bool: True if the test was successful, False otherwise.
         """
-        print(f"Testing target run in directory: {run_target_directory}")
+        print(f"Testing target run in directory: {run_target_dir}")
+
+        with open("config.yaml", "r") as f:
+            app_config = yaml.safe_load(f)
+
+        curl_log_path = os.path.join(run_target_dir, "run_curl.log")
+        networking_enabled = app_config.get("networking", False)
+        curl_command = app_config.get("testing_command", "curl http://localhost:8080")
+
+        # If networking is enabled, send a curl request
+        if networking_enabled:
+            try:
+                print(f"Sending curl request: {curl_command} with timeout of 4 seconds")
+                curl_result = run(
+                    list(curl_command.split(" ")), capture_output=True, text=True, timeout=4
+                )
+                with open(curl_log_path, "a") as f:
+                    f.write(curl_result.stdout)
+                    f.write(curl_result.stderr)
+                print(f"Curl request completed with stdout: {curl_result.stdout}")
+            except Exception as e:
+                with open(curl_log_path, "w") as f:
+                    f.write(f"[✗] Curl request failed: {e}")
+                return False
+        # TODO: Implement a test for the unikernel without networking
+
+        # Parse and check the curl_log_path for the success of the unikernel run
+        with open(curl_log_path, "r") as f:
+            log_content = f.read()
+            if (
+                "world" in log_content.lower()
+                or "bye" in log_content.lower()
+                or "hello" in log_content.lower()
+            ):
+                print("[✓] Unikernel run test passed")
+            else:
+                print("[✗] Unikernel run test failed")
+                return False
+
+        return True
 
     def _write_log_file(self, directory: str, filename: str, data: str) -> str:
         """
@@ -181,7 +210,7 @@ class TestRunner:
         # Test if the build was successful
         build_success = self._test_target_build(
             self.target.build_config.dir
-        )  # TODO: Implement this method to check if the build was successful
+        )  # TODO: Implement this method to check if the build was successful(with kernel path)
 
         if build_success:
             print(f"[✓]Build successful for target: {self.target.id}")
@@ -193,11 +222,7 @@ class TestRunner:
                 # Execute each run configuration (upto 5 secs)
                 self._run_target(run_config.dir)
                 # Test the running unikernel
-                self._test_target_run(
-                    self.target.build_config.dir
-                )  # TODO: This is required to be done symultaniously.
+
         else:
             print(f"[✗] Build failed for target: {self.target.id}")
             return
-       
-        
