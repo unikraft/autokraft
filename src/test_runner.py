@@ -193,11 +193,11 @@ class TestRunner:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(data)
             print(f"[✓] Log written to {file_path}")
+            return file_path
         except Exception as e:
-            print(f"[✗] Failed to write log to {filename} in {directory}: {e}")
-
-        return file_path if os.path.exists(file_path) else "Error writing log file"
-
+            error_message = f"Failed to write log to {filename} in {directory}: {e}"
+            print(f"[✗] {error_message}")
+            raise Exception(error_message)
     def run_test(self) -> None:
         """
         Run the test for the target setup.
