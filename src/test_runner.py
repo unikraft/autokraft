@@ -2,7 +2,6 @@
 This module provides TestRunner class to manage the test execution.
 """
 
-import logging
 import os
 import subprocess
 import time
@@ -11,11 +10,6 @@ from subprocess import PIPE, Popen, run
 import yaml
 
 from target_setup import TargetSetup
-
-logging.basicConfig(
-    level=logging.INFO,  # Set the logging level
-    format="%(asctime)s - %(levelname)s - %(message)s",  # Log format
-)
 
 
 class TestRunner:
