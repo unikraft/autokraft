@@ -71,7 +71,7 @@ class TestRunner:
                 stderr=run_log_file,
             )
 
-        print("Sleep staerted for 3 seconds to allow unikernel to start")
+        print("Sleep started for 3 seconds to allow unikernel to start")
         time.sleep(3)
 
         is_run_success = self._test_target_run(
