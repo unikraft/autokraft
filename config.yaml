@@ -1,5 +1,5 @@
 memory: 256
-netwoeking: true
+networking: true
 exposed_port: 8080
 public_port: 8080
 testing_command: "curl localhost:8080/?q=awesome_travis"
