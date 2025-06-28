@@ -4,14 +4,8 @@ This module provides the RunSetup class to manage the run setup for applications
 
 import os
 
-import logging
-
 from constants import SCRIPT_DIR
 
-logging.basicConfig(
-    level=logging.INFO,  # Set the logging level
-    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
-)
 
 class RunSetup:
     """Manage run setup.
@@ -47,8 +41,6 @@ class RunSetup:
         A template file stores variables that are to be replaced. Such variables
         define platform, architecture, used memory etc.
         """
-        logging.info(f"self.dir: {self.dir}")
-        logging.info(f"\tGenerating {output_name} from template {template_name}...")
         with open(os.path.join(SCRIPT_DIR, template_name), "r", encoding="utf-8") as stream:
             raw_content = stream.read()
 
