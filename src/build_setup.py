@@ -4,6 +4,7 @@ THis module provides the BuildSetup class, which manages the build setup.
 
 import os
 import logging
+import subprocess
 
 from constants import SCRIPT_DIR
 
@@ -283,6 +284,19 @@ class BuildSetup:
         with open(os.path.join(self.dir, "build"), "w", encoding="utf-8") as stream:
             stream.write(content)
         os.chmod(os.path.join(self.dir, "build"), 0o755)
+
+        if os.path.exists(self.app_config.initrd_cpio_path):
+            print(f"Rootfs cpio file {self.app_config.initrd_cpio_path} is copied to the {target_dir}")
+            result = subprocess.run(
+                ["cp", self.app_config.initrd_cpio_path, target_dir]
+            )
+            if result.returncode != 0:
+                logging.error(
+                    f"Failed to copy initrd cpio file from {self.app_config.initrd_cpio_path} to {target_dir}"
+                )
+
+        
+
 
     def _generate_build_kraft(self):
         """Generate build script for Kraft-based build."""
