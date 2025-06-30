@@ -294,7 +294,10 @@ class BuildSetup:
                 logging.error(
                     f"Failed to copy initrd cpio file from {self.app_config.initrd_cpio_path} to {target_dir}"
                 )
-
+        else:
+            raise FileNotFoundError(
+                f"Initrd cpio file {self.app_config.initrd_cpio_path} does not exist."
+            )
         
 
 
