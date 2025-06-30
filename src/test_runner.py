@@ -53,7 +53,7 @@ class TestRunner:
             self.target.build_config.dir, "build_stderr.log", result.stderr
         )
 
-    def _run_target(self, run_target_dir: str) -> None:
+    def _run_target(self, run_target_dir: str) -> bool:
         """
         Run the target setup.
 
@@ -86,41 +86,18 @@ class TestRunner:
 
         return is_run_success
 
-    def _is_build_successful(self, log_path: str) -> bool:
+    def _test_target_build(self, kernel_path: str) -> bool:
         """
-        Returns True if the build log contains a known success keyword.
-        Otherwise, returns False.
-
+        Returns True is the kernel is built successfully. By checking the kernel path.
+        
         Args:
-            log_path (str): The path to the build log file.
+            kernel_path (str): The path to the kernel file.
+            
         Returns:
-            bool: True if the build was successful, False otherwise.
-        """
-        success_keywords = ["Build completed successfully"]
-
-        try:
-            with open(log_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if any(keyword.lower() in line.lower() for keyword in success_keywords):
-                        return True
-        except Exception as e:
-            print(f"[Error reading log file: {e}]")
-
-        return False
-
-    def _test_target_build(self, build_target_directory: str) -> bool:
-        """
-        Test the target build.
-
-        This method will execute the test configurations for the target.
+            bool: True if the kernel is built successfully, False otherwise.
         """
 
-        if self._is_build_successful(self.build_stdout_file_path) or self._is_build_successful(
-            self.build_stderr_file_path
-        ):
-            return True
-
-        return False
+        return True if os.path.exists(kernel_path) else False
 
     def _test_target_run(self, run_target_dir: str) -> bool:
         """
@@ -209,8 +186,8 @@ class TestRunner:
         self._build_target()
         # Test if the build was successful
         build_success = self._test_target_build(
-            self.target.build_config.dir
-        )  # TODO: Implement this method to check if the build was successful(with kernel path)
+            self.target.build_config.kernel_path
+        )
 
         if build_success:
             print(f"[✓]Build successful for target: {self.target.id}")
