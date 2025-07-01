@@ -19,9 +19,15 @@ This project aims to:
 This project uses a shell script that requires sudo access. To avoid being prompted for a password every time the script runs, follow these steps:
 
 - Open the sudoers file using the safe editor:
-    `sudo visudo`
+    ```
+    sudo visudo
+    ```
 
 - Add the following line at the end (replace your_username and /path/to/your/script.sh):
-    `your_username ALL=(ALL) NOPASSWD: /path/to/your/script.sh or /path/to/pkill`
+
+    ```
+    your_username ALL=(ALL) NOPASSWD: /path/to/pkill /path/to/kraft
+    ```
+    
     You may use `which pkill` to know the correct path.
 
