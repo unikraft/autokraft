@@ -16,7 +16,7 @@ mkdir "$testing_rootfs"
 if test "$(basename "$init_rootfs")" = "Dockerfile"; then
     image_name="uk-{name}"
     d=$(pwd)
-    cd {init_dir}
+    cd {test_app_dir}
     docker build -o "$testing_rootfs" -f "$init_rootfs" -t "$image_name" .
     cd "$d"
 else

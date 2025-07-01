@@ -277,8 +277,7 @@ class AppConfig:
         else:
             rootfs = ""
         init_dir = os.getcwd()
-
-        # shank: I need to fix this path to my local directory(tester_config.yaml)
+        test_app_dir = os.path.join(init_dir, ".app")
         base = tester_config.config["source"]["base"]
 
         name = self.config["name"]
