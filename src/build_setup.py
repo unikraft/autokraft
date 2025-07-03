@@ -217,7 +217,7 @@ class BuildSetup:
 
             if self.app_config.config["rootfs"]:
                 if os.path.basename(self.app_config.config["rootfs"]) == "Dockerfile":
-                    rootfs = os.path.join(os.getcwd(), self.app_config.config["rootfs"])
+                    rootfs = os.path.join(os.getcwd(),".app", self.app_config.config["rootfs"])
                 else:
                     rootfs = os.path.join(self.dir, "rootfs")
                 stream.write(f"rootfs: {rootfs}\n\n")
@@ -285,7 +285,7 @@ class BuildSetup:
             stream.write(content)
         os.chmod(os.path.join(self.dir, "build"), 0o755)
 
-        if os.path.exists(self.app_config.initrd_cpio_path):
+        if self.app_config.initrd_cpio_path is not None and os.path.exists(self.app_config.initrd_cpio_path):
             print(f"Rootfs cpio file {self.app_config.initrd_cpio_path} is copied to the {target_dir}")
             result = subprocess.run(
                 ["cp", self.app_config.initrd_cpio_path, target_dir]
