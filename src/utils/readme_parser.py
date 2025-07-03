@@ -217,6 +217,7 @@ class ReadmeParser:
         if parsed_data.memory_values:
             try:
                 memory = parsed_data.memory_values[memory_index]
+                memory = memory[:-1] if memory.endswith("M") else memory
                 config["memory"] = memory
                 updates["memory"] = memory
             except IndexError:
