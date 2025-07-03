@@ -222,4 +222,5 @@ Kraftfile
 server.py
 
 .app/
+.rootfs-for-testing
 
