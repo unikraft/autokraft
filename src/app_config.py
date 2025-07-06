@@ -308,13 +308,8 @@ class AppConfig:
                 print(f"Error: {result.stderr}", file=sys.stderr)
         except subprocess.CalledProcessError as e:
             print(f"Error running app_fs_init.sh: {e}", file=sys.stderr)
-
-        if os.path.exists(os.path.join(test_dir, "app_fs_init.sh")):
-            print(f"Initialized application filesystem initrd.cpio is stored in {app_dir}/initrd.cpio")
-            self.initrd_cpio_path = os.path.join(app_dir, "initrd.cpio")
-        else:
-            print(f"Failed to initialize application filesystem in {test_dir}/app_fs_init.sh", file=sys.stderr)
-        
+        print(f"Initialized application filesystem initrd.cpio is stored in {app_dir}/initrd.cpio")
+        self.initrd_cpio_path = os.path.join(app_dir, "initrd.cpio")
         return 0 if self.initrd_cpio_path is None else 1, self.initrd_cpio_path
 
     def __init__(self, app_config=".app/Kraftfile", user_config="config.yaml"):

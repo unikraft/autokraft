@@ -77,6 +77,9 @@ class TestRunner:
         is_run_success = self._test_target_run(
             self.target.build_config.dir
         )  # TODO: This is required to be done symultaniously.
+        
+        print(f"Run test result: {str(process.stdout) + str(process.stderr)}")
+        print("/n/n")
 
         # Wait for the unikernel to finish or timeout
         try:
@@ -129,7 +132,7 @@ class TestRunner:
                 with open(curl_log_path, "a") as f:
                     f.write(curl_result.stdout)
                     f.write(curl_result.stderr)
-                print(f"Curl request completed with stdout: {curl_result.stdout}")
+                print(f"Curl request completed with stdout: {curl_result.stdout + curl_result.stderr}")
             except Exception as e:
                 with open(curl_log_path, "w") as f:
                     f.write(f"[✗] Curl request failed: {e}")
@@ -175,6 +178,7 @@ class TestRunner:
             error_message = f"Failed to write log to {filename} in {directory}: {e}"
             print(f"[✗] {error_message}")
             raise Exception(error_message)
+        
     def run_test(self) -> None:
         """
         Run the test for the target setup.
