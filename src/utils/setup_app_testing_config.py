@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Optional, Tuple
+from load_llm import LLMLoader
 
 
 class TestAppConfig:
@@ -48,12 +49,21 @@ class TestAppConfig:
         target_path = Path(self.base_test_dir) / catalog_type / relative_path
         self._create_directory_structure_only(target_path)
         
+        # Generate RunConfig.yaml using LLM
+        run_config_content = self._generate_run_config(readme_content, relative_path)
+        
+        # Save RunConfig.yaml to target directory
+        run_config_path = target_path / "RunConfig.yaml"
+        self._save_run_config(run_config_path, run_config_content)
+        
         return {
             "source_directory": str(source_path),
             "catalog_type": catalog_type,
             "relative_path": str(relative_path),
             "target_directory": str(target_path),
-            "readme_content": readme_content
+            "readme_content": readme_content,
+            "run_config_content": run_config_content,
+            "run_config_path": str(run_config_path)
         }
 
     def _extract_catalog_info(self, source_path: Path) -> Tuple[Optional[str], Optional[Path]]:
@@ -109,6 +119,155 @@ class TestAppConfig:
         
         return None
 
+    def _generate_run_config(self, readme_content: str, relative_path: Path) -> str:
+        """
+        Generate RunConfig.yaml content using LLM based on README content.
+        
+        Args:
+            readme_content: Content from README file
+            relative_path: Relative path of the application
+        
+        Returns:
+            Generated RunConfig.yaml content as string
+        """
+        try:
+            # Initialize LLM
+            llm_loader = LLMLoader()
+            model = llm_loader.get_model()
+            
+            # Create prompt for RunConfig generation
+            prompt = self._create_run_config_prompt(readme_content, relative_path)
+            
+            # Generate RunConfig using LLM
+            response = model.invoke(prompt)
+            
+            return str(response.content)
+            
+        except Exception as e:
+            print(f"Warning: Could not generate RunConfig using LLM: {e}")
+            # Return a basic template if LLM fails
+            return self._get_default_run_config_template(relative_path)
+    
+    def _create_run_config_prompt(self, readme_content: str, relative_path: Path) -> str:
+        """
+        Create a prompt for LLM to generate RunConfig.yaml.
+        
+        Args:
+            readme_content: README file content
+            relative_path: Application relative path
+        
+        Returns:
+            Formatted prompt string
+        """
+        app_name = relative_path.name if relative_path.parts else "unknown"
+        
+        prompt = f"""
+You are an expert AI assistant familiar with:
+
+1. **Unikraft & Unikernels**
+   – VMMs (QEMU, Firecracker, etc.)
+   – Memory, networking and hypervisor configuration options
+
+2. **Unikraft Catalog Applications**
+   – Core catalog apps (hello‑world, redis, httpd, etc.)
+   – Typical directory layouts and required build/run steps
+
+3. **Custom Testing Framework**
+   – Uses isolated `.app` fixture directories
+   – Captures `build.log`, `run.log`, `summary.json`
+   – Integrates with CI/CD for parallel matrix runs and artifact upload
+
+---
+
+## Your Task
+
+Given the contents of an application’s `README.md` (inserted below), **generate a `RunConfig.yaml`** that will:
+
+* **Launch** the unikernel with proper VMM, memory, and networking settings
+* **Define** post‑run validation steps to confirm success
+
+Do **not** include any commentary—only output the YAML.
+
+```markdown
+{readme_content}
+```
+
+---
+
+## RunConfig Schema
+
+```yaml
+RunConfig:
+  RunMetadata: # extract most of these info from the kraft run command
+    Memory:         # integer in MB (e.g. 256)
+    Networking:     # true or false
+    ExternalPort:   # integer, only if Networking: true else 0
+    PublicPort:     # integer, only if Networking: true else 0
+
+  TestingType:      # “no-command” | “curl” | “list-of-commands”
+  ListOfCommands:   # only if TestingType: list-of-commands
+    - "<shell command 1>"
+    - "<shell command 2>"
+
+  ExpectedOutput:   # array of strings to match in test output
+    # mostly like hello / world / bye / world or other based on application 
+    - "Possible phrase 1"
+    - "Possible phrase 2"
+```
+
+---
+
+## Behavior Guidelines
+
+* **Hello‑world or console apps**
+
+  * `Networking: false`
+  * `TestingType: no-command`
+  * `ExpectedOutput`: the exact console message
+
+* **HTTP services (nginx, httpd, etc.)**
+
+  * `Networking: true`
+  * `TestingType: curl`
+  * `NetworkingType`: choose NAT (e.g. `curl localhost:<PublicPort>`) or Bridge (e.g. `curl http://<ExternalIP>:<PublicPort>`)
+  * `ExpectedOutput`: e.g. “HTTP/1.1 200 OK”
+
+* **Stateful services (redis, mysql, etc.)**
+
+  * `Networking: true`
+  * `TestingType: list-of-commands`
+  * `ListOfCommands`: e.g. `redis-cli -h localhost -p <PublicPort> PING`
+  * `ExpectedOutput`: e.g. “PONG”
+
+* **Complex multi‑step apps**
+
+  * Use `list-of-commands` for setup, health-check, and teardown
+  * Ensure `ExpectedOutput` covers key success markers
+
+---
+
+**Generate only the final `RunConfig.yaml`**, populated with values inferred from the README.
+Do **not** include any commentary—only output the raw YAML.  
+**Do not** include any code fences (```), headings, or extra formatting—output raw YAML only.
+
+"""
+        return prompt
+    
+    def _save_run_config(self, run_config_path: Path, content: str) -> None:
+        """
+        Save RunConfig.yaml content to file.
+        
+        Args:
+            run_config_path: Path where to save the RunConfig.yaml
+            content: YAML content to save
+        """
+        try:
+            with open(run_config_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print(f"RunConfig.yaml saved at: {run_config_path}")
+        except Exception as e:
+            print(f"Warning: Could not save RunConfig.yaml: {e}")
+
 
 def main(directory_path: str) -> dict:
     """
@@ -116,12 +275,13 @@ def main(directory_path: str) -> dict:
     """
     try:
         test_config = TestAppConfig()
-        config = test_config.setup_config(directory_path)
+        test_app_config = test_config.setup_config(directory_path)
         print(f"Successfully processed: {directory_path}")
-        print(f"Catalog type: {config['catalog_type']}")
-        print(f"Target created at: {config['target_directory']}")
-        print(f"README content loaded: {len(config['readme_content'])} characters")
-        return config
+        print(f"Catalog type: {test_app_config['catalog_type']}")
+        print(f"Target created at: {test_app_config['target_directory']}")
+        print(f"README content loaded: {len(test_app_config['readme_content'])} characters")
+        print(f"RunConfig.yaml generated and saved at: {test_app_config['run_config_path']}")
+        return test_app_config
     except Exception as e:
         print(f"Error processing directory: {e}")
         raise
