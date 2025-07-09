@@ -1,7 +1,7 @@
-import getpass
 import os
 from typing import Optional
 from langchain.chat_models import init_chat_model
+from dotenv import load_dotenv
 
 
 class LLMLoader:
@@ -14,9 +14,9 @@ class LLMLoader:
         Initialize LLMLoader.
         
         Args:
-            model_name: Name of the model to load (default: "llama-3.1-8b-instant")
+            model_name: Name of the model to load (default: "llama-3.3-70b-versatile")
             model_provider: Provider for the model (default: "groq")
-            temperature: Controls randomness in responses (0.0-1.0, default: 0.7)
+            temperature: Controls randomness in responses (0.0-1.0, default: 0.05)
         """
         self.model_name = model_name
         self.model_provider = model_provider
@@ -26,12 +26,26 @@ class LLMLoader:
     
     def _setup_api_key(self) -> None:
         """
-        Setup API key for the model provider.
+        Setup API key for the model provider by loading from .env file.
         """
+        # Load environment variables from .env file
+        load_dotenv()
+        
         if self.model_provider.lower() == "groq":
-            if not os.environ.get("GROQ_API_KEY"):
-                os.environ["GROQ_API_KEY"] = getpass.getpass("Enter API key for Groq: ")
+            api_key = os.environ.get("GROQ_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "GROQ_API_KEY not found in environment variables. "
+                    "Please add GROQ_API_KEY=your_api_key to your .env file"
+                )
         # Add other providers as needed
+        elif self.model_provider.lower() == "openai":
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY not found in environment variables. "
+                    "Please add OPENAI_API_KEY=your_api_key to your .env file"
+                )
     
     def get_model(self):
         """
