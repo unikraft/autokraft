@@ -54,8 +54,12 @@ class TestAppConfig:
         
         # Save RunConfig.yaml to target directory
         run_config_path = target_path / "RunConfig.yaml"
-        self._save_run_config(run_config_path, run_config_content)
+        self._save_config(run_config_path, run_config_content)
         
+        # creating BuildConfig.yaml
+        build_config_path = target_path / "BuildConfig.yaml"
+        self._save_config(build_config_path, "th_time: 180")
+
         return {
             "source_directory": str(source_path),
             "catalog_type": catalog_type,
@@ -253,20 +257,20 @@ Do **not** include any commentary—only output the raw YAML.
 """
         return prompt
     
-    def _save_run_config(self, run_config_path: Path, content: str) -> None:
+    def _save_config(self, config_path: Path, content: str) -> None:
         """
-        Save RunConfig.yaml content to file.
+        Save configuration content to file.
         
         Args:
-            run_config_path: Path where to save the RunConfig.yaml
-            content: YAML content to save
+            config_path: Path where to save the configuration file
+            content: Configuration content to save
         """
         try:
-            with open(run_config_path, 'w', encoding='utf-8') as f:
+            with open(config_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-            print(f"RunConfig.yaml saved at: {run_config_path}")
+            print(f"Configuration file saved at: {config_path}")
         except Exception as e:
-            print(f"Warning: Could not save RunConfig.yaml: {e}")
+            print(f"Warning: Could not save configuration file {config_path}: {e}")
 
 
 def main(directory_path: str) -> dict:

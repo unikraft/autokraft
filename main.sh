@@ -21,4 +21,4 @@ fi
 ./scripts/utils/setup.sh "$app_path"
 
 # Run tests.
-./scripts/utils/tests_runner.sh
+./scripts/utils/tests_runner.sh "$app_path"

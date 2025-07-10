@@ -2,6 +2,7 @@
 This module provides TestRunner class to manage the test execution.
 """
 
+import csv
 import os
 import subprocess
 import time
@@ -17,15 +18,27 @@ class TestRunner:
     This TestRunner class is designed to manage the test execution.
     """
 
-    def __init__(self, target: TargetSetup) -> None:
+    def __init__(self, target: TargetSetup, o_app_dir: str) -> None:
         """
         Initialize the TestRunner with a specific target configrations.
 
         :param targets: Specific TargetSetup object for TestRunner.
         """
         self.target = target
-
-    def _build_target(self) -> None:
+        self.test_app_dir = os.path.join(
+            os.getcwd(),
+            "test-app-config",
+            "catalog" + o_app_dir.split("/catalog")[-1]
+        )
+        if not os.path.exists(self.test_app_dir):
+            raise FileNotFoundError(f"Test app directory does not exist: {self.test_app_dir}")
+        
+        with open(os.path.join(self.test_app_dir, "BuildConfig.yaml"), "r") as f:
+            self.test_build_config = yaml.safe_load(f)
+        
+        return None
+        
+    def _build_target(self) -> int:
         """
         Build the target setup.
 
@@ -39,19 +52,70 @@ class TestRunner:
 
         print("Building target:", self.target.id)
 
-        result = subprocess.run(
-            ["bash", build_script_path],
-            cwd=self.target.build_config.dir,
-            capture_output=True,
-            text=True,
+        # Initialize log files with headers
+        self._write_log_file(
+            self.target.build_config.dir, "build_stdout.log", f"=== BUILD STARTED for {self.target.id} ===\n", mode="w"
+        )
+        self._write_log_file(
+            self.target.build_config.dir, "build_stderr.log", f"=== BUILD STARTED for {self.target.id} ===\n", mode="w"
         )
 
-        self.build_stdout_file_path = self._write_log_file(
-            self.target.build_config.dir, "build_stdout.log", result.stdout
-        )
-        self.build_stderr_file_path = self._write_log_file(
-            self.target.build_config.dir, "build_stderr.log", result.stderr
-        )
+        threshold_timeout = self.test_build_config.get("th_time", 180)  
+
+        try:
+            # Use subprocess.run with timeout for better control
+            result = subprocess.run(
+                ["bash", build_script_path],
+                cwd=self.target.build_config.dir,
+                capture_output=True,
+                text=True,
+                timeout=threshold_timeout,
+                check=False   # Don't raise exception on non-zero exit codes
+            )
+            
+            self._write_log_file(
+                self.target.build_config.dir, "build_stdout.log", result.stdout, mode="a+"
+            )
+            self._write_log_file(
+                self.target.build_config.dir, "build_stderr.log", result.stderr, mode="a+"
+            )
+            self._write_log_file(
+                self.target.build_config.dir, "build_returncode.log", str(result.returncode), mode="w"
+            )
+            
+            if result.returncode != 0:
+                print(f"[!] Build completed with non-zero exit code: {result.returncode}")
+                self._write_log_file(
+                    self.target.build_config.dir, "build_stdout.log", f"\n=== BUILD FAILED with exit code {result.returncode} ===\n", mode="a+"
+                )
+            else:
+                print(f"[✓] Build completed successfully")
+                self._write_log_file(
+                    self.target.build_config.dir, "build_stdout.log", f"\n=== BUILD COMPLETED SUCCESSFULLY ===\n", mode="a+"
+                )
+                
+        except subprocess.TimeoutExpired:
+            print(f"[✗] Build timed out after {threshold_timeout} seconds")
+            # Append timeout information to existing logs
+            timeout_msg = f"\n=== BUILD TIMEOUT - Process killed after {threshold_timeout} seconds ===\n"
+            self._write_log_file(
+                self.target.build_config.dir, "build_stderr.log", timeout_msg, mode="a+"
+            )
+            self._write_log_file(
+                self.target.build_config.dir, "build_returncode.log", "-1", mode="w"
+            )
+        except Exception as e:
+            print(f"[✗] Build failed with exception: {e}")
+            # Append error information to existing logs
+            error_msg = f"\n=== BUILD ERROR: {str(e)} ===\n"
+            self._write_log_file(
+                self.target.build_config.dir, "build_stderr.log", error_msg, mode="a+"
+            )
+            self._write_log_file(
+                self.target.build_config.dir, "build_returncode.log", "-2", mode="w"
+            )
+
+        return result.returncode if 'result' in locals() else -1
 
     def _run_target(self, run_target_dir: str) -> bool:
         """
@@ -130,8 +194,8 @@ class TestRunner:
                     list(curl_command.split(" ")), capture_output=True, text=True, timeout=4
                 )
                 with open(curl_log_path, "a") as f:
-                    f.write(curl_result.stdout)
-                    f.write(curl_result.stderr)
+                    f.write("STDOUT: \n" + curl_result.stdout)
+                    f.write("STDERR: \n" + curl_result.stderr)
                 print(f"Curl request completed with stdout: {curl_result.stdout + curl_result.stderr}")
             except Exception as e:
                 with open(curl_log_path, "w") as f:
@@ -139,22 +203,65 @@ class TestRunner:
                 return False
         # TODO: Implement a test for the unikernel without networking
 
-        # Parse and check the curl_log_path for the success of the unikernel run
-        with open(curl_log_path, "r") as f:
-            log_content = f.read()
-            if (
-                "world" in log_content.lower()
-                or "bye" in log_content.lower()
-                or "hello" in log_content.lower()
-            ):
-                print("[✓] Unikernel run test passed")
-            else:
-                print("[✗] Unikernel run test failed")
-                return False
-
+            # Parse and check the curl_log_path for the success of the unikernel run
+            with open(curl_log_path, "r") as f:
+                log_content = f.read()
+                if (
+                    "world" in log_content.lower()
+                    or "bye" in log_content.lower()
+                    or "hello" in log_content.lower()
+                ):
+                    print("[✓] Unikernel run test passed")
+                else:
+                    print("[✗] Unikernel run test failed")
+                    return False
+        else:
+            print("[✓] Networking is disabled, skipping curl test")
+            return False
+        
         return True
 
-    def _write_log_file(self, directory: str, filename: str, data: str) -> str:
+    def _write_row_to_csv(self, row_dict: dict, csv_path: str) -> None:
+        """
+        Appends a row to a CSV file. Writes headers if the file does not exist.
+        
+        :param row_dict: Dictionary where keys are column names and values are row values
+        :param csv_path: Path to the CSV file
+        """
+        file_exists = os.path.isfile(csv_path)
+
+        with open(csv_path, mode='a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=row_dict.keys())
+
+            if not file_exists:
+                writer.writeheader()  # Write headers only once
+
+            writer.writerow(row_dict)
+
+    def _update_build_report(self, target: TargetSetup, return_code: int, success: bool) -> None:
+        """
+        Update the build report with the target's build status.
+
+        Args:
+            target (TargetSetup): The target setup object.
+            return_code (int): The return code from the build process.
+            success (bool): Whether the build was successful or not.
+        """
+        build_config = target.config["build"]
+        compiler_info = build_config.pop('compiler', {})
+        flat_dict = {
+            'test_name': target.id,
+            'status': 'pass' if return_code == 0 and success else 'fail',
+            'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
+            'compiler_type': compiler_info.get('type', ''),
+            **build_config
+        }
+
+        report_path = os.path.join(self.test_app_dir, "build_report.csv")
+        self._write_row_to_csv(flat_dict, report_path)
+        print(f"[✓] Build report updated for target {target.id}")
+
+    def _write_log_file(self, directory: str, filename: str, data: str, mode: str = "w") -> str:
         """
         Writes the given data to a file in the specified directory.
         Creates the directory if it does not exist.
@@ -163,6 +270,7 @@ class TestRunner:
             directory (str): The directory path where the log file will be saved.
             filename (str): The name of the log file (e.g., 'build.log').
             data (str): The content to write into the log file.
+            mode (str): File mode - 'w' for overwrite, 'a+' for append (default: 'w').
 
         Returns:
             str: The path to the log file if written successfully, otherwise an error message.
@@ -170,9 +278,9 @@ class TestRunner:
         try:
             os.makedirs(directory, exist_ok=True)  # Ensure the directory exists
             file_path = os.path.join(directory, filename)
-            with open(file_path, "w", encoding="utf-8") as f:
+            with open(file_path, mode, encoding="utf-8") as f:
                 f.write(data)
-            print(f"[✓] Log written to {file_path}")
+            print(f"[✓] Log {'appended to' if 'a' in mode else 'written to'} {file_path}")
             return file_path
         except Exception as e:
             error_message = f"Failed to write log to {filename} in {directory}: {e}"
@@ -187,14 +295,22 @@ class TestRunner:
         """
         print(f"Running tests for target: {self.target.id}")
         # Build the target before running tests(upto 2 mins)
-        self._build_target()
+        build_return_code = self._build_target()
         # Test if the build was successful
         build_success = self._test_target_build(
             self.target.build_config.kernel_path
         )
+        # Update the build status in the test-app-config/build_report.csv 
+        self._update_build_report(
+            self.target,
+            build_return_code,
+            build_success
+        )
 
-        if build_success:
-            print(f"[✓]Build successful for target: {self.target.id}")
+        
+        if build_return_code == 0 and build_success:
+            print(f"[✓] Build successful for target: {self.target.id}")
+
             # Iterate over each of the runs
             for idx, run_config in enumerate(self.target.run_configs):
 
