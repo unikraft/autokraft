@@ -45,7 +45,7 @@ def generate_target_configs(tester_config, app_config, system_config):
 
 def usage(argv0):
     """Prints the usage instructions for the script."""    
-    print(f"Usage: {argv0} <path/to/tester.yaml>", file=sys.stderr)
+    print(f"Usage: {argv0} <path/to/origina/app/dir>", file=sys.stderr)
 
 
 def main():
@@ -55,12 +55,13 @@ def main():
         usage(sys.argv[0])
         sys.exit(1)
 
-    if not os.path.exists(sys.argv[1]):
-        print(f"Not a file: {sys.argv[1]}")
+    app_dir = os.path.abspath(sys.argv[1])
+    if not os.path.exists(app_dir):
+        print(f"Not a file: {app_dir}", file=sys.stderr)
         sys.exit(1)
 
     try:
-        t = TesterConfig(sys.argv[1])
+        t = TesterConfig()
         a = AppConfig()
         a.generate_init(t)
         s = SystemConfig()
@@ -73,10 +74,12 @@ def main():
             t.generate()
 
         for target_config in targets:
-            runner = TestRunner(target_config)
+            runner = TestRunner(target_config, app_dir)
             runner.run_test()
 
     finally:
+        # TODO: Copy the test logs to the test-app-config directory
+        # Cleanup the folder after running tests.
         # cleanup_folder()
         pass
 

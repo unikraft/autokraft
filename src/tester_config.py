@@ -17,7 +17,7 @@ class TesterConfig:
     Provide configurations for target definition: get_target_configs()
     """
 
-    def __init__(self, config_file):
+    def __init__(self, config_file="src/tester_config.yaml"):
         try:
             with open(config_file, "r", encoding="utf8") as stream:
                 self.config = yaml.safe_load(stream)
