@@ -201,20 +201,20 @@ Do **not** include any commentary—only output the YAML.
 ## RunConfig Schema
 
 ```yaml
-RunConfig:
   RunMetadata: # extract most of these info from the kraft run command
     Memory:         # integer in MB (e.g. 256)
     Networking:     # true or false
-    ExternalPort:   # integer, only if Networking: true else 0
+    ExposedPort:   # integer, only if Networking: true else 0
     PublicPort:     # integer, only if Networking: true else 0
 
   TestingType:      # “no-command” | “curl” | “list-of-commands”
-  ListOfCommands:   # only if TestingType: list-of-commands
-    - "<shell command 1>"
+  ListOfCommands:   # only if TestingType: list-of-commands or curl
+    - "<shell command 1> or complete curl command with localhost"
     - "<shell command 2>"
 
   ExpectedOutput:   # array of strings to match in test output
     # mostly like hello / world / bye / world or other based on application 
+    # Add too many possible phrases to match
     - "Possible phrase 1"
     - "Possible phrase 2"
 ```

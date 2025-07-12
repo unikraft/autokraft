@@ -30,12 +30,16 @@ class TestRunner:
             "test-app-config",
             "catalog" + o_app_dir.split("/catalog")[-1]
         )
+
         if not os.path.exists(self.test_app_dir):
             raise FileNotFoundError(f"Test app directory does not exist: {self.test_app_dir}")
         
         with open(os.path.join(self.test_app_dir, "BuildConfig.yaml"), "r") as f:
             self.test_build_config = yaml.safe_load(f)
         
+        with open(os.path.join(self.test_app_dir, "RunConfig.yaml"), "r") as f:
+            self.test_run_config = yaml.safe_load(f)
+
         return None
         
     def _build_target(self) -> int:
@@ -117,11 +121,17 @@ class TestRunner:
 
         return result.returncode if 'result' in locals() else -1
 
-    def _run_target(self, run_target_dir: str) -> bool:
+    def _run_target(self, run_target_dir: str) -> Popen[bytes]:
         """
         Run the target setup.
 
         This method will execute the run configurations for the target.
+
+        Args: 
+            run_target_dir (str): The directory where the target is running.
+
+        Returns:
+            bool: True if the process run was successful, False otherwise.
         """
         run_script_path = os.path.join(run_target_dir, "run")
         run_log_path = os.path.join(run_target_dir, "run.log")
@@ -135,23 +145,7 @@ class TestRunner:
                 stderr=run_log_file,
             )
 
-        print("Sleep started for 3 seconds to allow unikernel to start")
-        time.sleep(3)
-
-        is_run_success = self._test_target_run(
-            self.target.build_config.dir
-        )  # TODO: This is required to be done symultaniously.
-        
-        print(f"Run test result: {str(process.stdout) + str(process.stderr)}")
-        print("/n/n")
-
-        # Wait for the unikernel to finish or timeout
-        try:
-            process.wait(timeout=2)
-        except Exception as e:
-            process.terminate()
-
-        return is_run_success
+        return process
 
     def _test_target_build(self, kernel_path: str) -> bool:
         """
@@ -221,6 +215,76 @@ class TestRunner:
         
         return True
 
+    def _test_curl_run(self, run_config) -> tuple[int, str]:
+        """
+        Test the curl run for the target setup.
+
+        This method will execute the curl command to test the target's run configuration.
+        """
+        print(f"Testing curl run for target: {self.target.id}")
+
+        test_command = self.test_run_config.get("ListOfCommands", ["curl http://localhost:8080"])[0]
+        
+        # Check the networking configuration
+        network_type = run_config.config.get("networking", "none")
+        if network_type == "bridge":
+            test_command = test_command.replace("https://", "")
+            test_command = test_command.replace("http://", "")
+            test_command = test_command.replace("localhost", "172.44.0.2")
+        
+        print(f"Executing test command: {test_command}")
+
+        try:
+            result = subprocess.run(
+                list(test_command.split()),
+                capture_output=True,
+                text=True,
+                timeout=4  # Timeout for the curl command
+            )
+            run_log = result.stdout + result.stderr
+            print(f"Curl command output: {result.stdout}")
+            # print(f"Curl command error: {result.stderr}")
+
+            if result.returncode == 0:
+                print("[✓] Curl test passed")
+                run_log += "\n[✓] Curl command  executed\n"
+            else:
+                print("[✗] Curl test failed")
+                run_log += "\n[✗] Curl command failed\n"
+
+            return_code = result.returncode
+        except Exception as e:
+            print(f"[✗] Curl test encountered an error: {e}")
+            run_log = f"[✗] Curl command failed with error: {e}\n"
+            return_code = -1
+
+        return return_code, run_log
+
+    def _validate_run(self, run_log: str) -> bool:
+        """
+        Validate the run log and return code.
+
+        This method will check the run log for specific keywords to determine if the run was successful.
+        """
+        possible_outputs = self.test_run_config.get("ListOfCommands", ["Hwllo, World!", "Bye world"])
+        string_found = False
+
+        for output in possible_outputs:
+            for word in output.split():
+                if word.lower() in run_log.lower():
+                    string_found = True
+                    print(f"[✓] Found expected output: {output}")
+                    break
+
+            if output.lower() in run_log.lower():
+                string_found = True
+                print(f"[✓] Found expected output: {output}")
+                break
+        
+        return string_found
+        
+        
+
     def _write_row_to_csv(self, row_dict: dict, csv_path: str) -> None:
         """
         Appends a row to a CSV file. Writes headers if the file does not exist.
@@ -250,7 +314,7 @@ class TestRunner:
         build_config = target.config["build"]
         compiler_info = build_config.pop('compiler', {})
         flat_dict = {
-            'test_name': target.id,
+            'build_no': target.id,
             'status': 'pass' if return_code == 0 and success else 'fail',
             'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
             'compiler_type': compiler_info.get('type', ''),
@@ -260,6 +324,36 @@ class TestRunner:
         report_path = os.path.join(self.test_app_dir, "build_report.csv")
         self._write_row_to_csv(flat_dict, report_path)
         print(f"[✓] Build report updated for target {target.id}")
+
+    def _update_run_report(self, run_config, build_no: int, run_return_code: int, output_matched: bool) -> None:
+        """
+        Update the run report with the target's run status.
+
+        Args:
+            run_config (RunConfig): The run configuration object.
+            run_return_code (int): The return code from the run process.
+            output_matched (bool): Whether the output matched the expected output or not.
+        """
+        status = 'fail'
+        
+        if run_return_code == 0 and output_matched:
+            status = 'pass'
+        elif run_return_code == 0 and not output_matched:
+            status = 'partial-pass'
+
+        flat_dict = {
+            'build_no': build_no,
+            'run_id': run_config.dir.split("/")[-1],
+            'status': status,
+            'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
+            'return_code': run_return_code,
+            'output_matched': output_matched,
+            **run_config.config
+        }
+
+        report_path = os.path.join(self.test_app_dir, "run_report.csv")
+        self._write_row_to_csv(flat_dict, report_path)
+        print(f"[✓] Run report updated for target {run_config.dir.split('/')[-1]} with status {status}")
 
     def _write_log_file(self, directory: str, filename: str, data: str, mode: str = "w") -> str:
         """
@@ -309,17 +403,47 @@ class TestRunner:
 
         
         if build_return_code == 0 and build_success:
-            print(f"[✓] Build successful for target: {self.target.id}")
+            print(f"[✓] Build successful for target: {self.target.id} \n\n")
 
             # Iterate over each of the runs
             for idx, run_config in enumerate(self.target.run_configs):
 
                 print(f"Running configuration: {run_config.dir}")
-                # print(f"Run configuration of {idx + 1} is {run_config.config}")
-                # Execute each run configuration (upto 5 secs)
-                self._run_target(run_config.dir)
-                # Test the running unikernel
+                # print(f"\tRun configuration of {idx + 1} is {run_config.config}")
+                running_process = self._run_target(run_config.dir)
+                print(f"[✓] Target {self.target.id} is running with PID: {running_process.pid}")
+               
+                print(f"Waiting for the unikernel to start...40 seconds")
+                time.sleep(40) # waiting for 40 seconds for the unikernel to start
+            
+                if self.test_run_config["TestingType"] == "curl":
+                    # Complete the curl test
+                    run_return_code, run_log = self._test_curl_run(run_config)
+                elif self.test_run_config["TestingType"] == "list-of-commands":
+                    #complete the list of commands test
+                    run_return_code, run_log = -2, "Implementation for list-of-commands test is pending"
+                else:
+                    # Test for no commands
+                    run_return_code, run_log = -2, "Implementation for no commands test is pending"
+                
+                # Now I need to validate the test
+                output_matched = self._validate_run(run_log)
+
+                # Update the run log file
+                self._write_log_file(
+                    run_config.dir, "complete_run.log", run_log, mode="w"
+                )
+
+                # Update the run report
+                self._update_run_report(
+                    run_config, self.target.id, run_return_code, output_matched
+                )
+                
+                # Kill the running process
+                running_process.terminate()
+                print(f"[✓] Target {self.target.id} with PID: {running_process.pid} has been terminated")
 
         else:
             print(f"[✗] Build failed for target: {self.target.id}")
-            return
+        
+        return
