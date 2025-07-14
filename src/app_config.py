@@ -138,39 +138,41 @@ class AppConfig(Loggable):
                 targets.append((plat, arch))
             self.config["targets"] = targets
 
-    def _parse_user_config(self, user_config_file):
+    def _parse_user_config(self, run_config_file):
         """Parse config.yaml file.
 
         Populate corresponding entries in self.config.
         """
-
-        with open(user_config_file, "r", encoding="utf-8") as stream:
+        relative_path = self.app_dir.split("/catalog")[-1]
+        run_config_path = os.path.join("test-app-config/catalog" + relative_path, run_config_file)
+        
+        with open(run_config_path, "r", encoding="utf-8") as stream:
             data = yaml.safe_load(stream)
 
         self.config["networking"] = False
 
-        if not "networking" in data.keys():
+        if not "Networking" in data["RunMetadata"].keys():
             self.config["networking"] = False
         else:
-            self.config["networking"] = data["networking"]
+            self.config["networking"] = data["RunMetadata"]["Networking"]
 
         if not "test_dir" in data.keys():
             self.config["test_dir"] = None
         else:
             self.config["test_dir"] = data["test_dir"]
 
-        if not "memory" in data.keys():
-            self.logger.warning(f"Error: 'memory' attribute is not defined in {user_config_file}.")
+        if not "Memory" in data["RunMetadata"].keys():
+            self.logger.warning(f"Error: 'memory' attribute is not defined in {run_config_path}.")
             sys.exit(1)
         else:
-            self.config["memory"] = data["memory"]
+            self.config["memory"] = data["RunMetadata"]["Memory"]
 
-        if not "exposed_port" in data.keys():
+        if not "ExposedPort" in data["RunMetadata"].keys():
             self.config["exposed_port"] = None
             self.config["public_port"] = None
         else:
-            self.config["exposed_port"] = data["exposed_port"]
-            self.config["public_port"] = data["public_port"]
+            self.config["exposed_port"] = data["RunMetadata"]["ExposedPort"]
+            self.config["public_port"] = data["RunMetadata"]["PublicPort"]
 
     def _parse_app_config(self, app_config_file):
         """Parse Kraftfile.
@@ -315,15 +317,16 @@ class AppConfig(Loggable):
         self.initrd_cpio_path = os.path.join(app_dir, "initrd.cpio")
         return 0 if self.initrd_cpio_path is None else 1, self.initrd_cpio_path
 
-    def __init__(self, app_config=".app/Kraftfile", user_config="config.yaml"):
+    def __init__(self, app_dir: str, app_config=".app/Kraftfile", run_config="RunConfig.yaml"):
         """Initialize application configuration.
 
-        Parse application config (`Kraftfile`) and user config (`config.yaml`)
+        Parse application config (`Kraftfile`) and user run_config (`RunConfig.yaml`)
         and populate all entries in the self.config dictionary.
         """
         super().__init__()
+        self.app_dir = app_dir
         self.config = {}
-        self._parse_user_config(user_config)
+        self._parse_user_config(run_config)
         self._parse_app_config(app_config)
         self.initrd_cpio_path = None
 

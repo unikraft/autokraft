@@ -11,4 +11,5 @@ cp -r "$dir_path" .
 folder_name=$(basename "$dir_path")
 mv "$folder_name" .app
 
-python3 src/utils/readme_parser.py
+source testing-fw-venv/bin/activate
+python3 src/utils/setup_app_testing_config.py "$dir_path"

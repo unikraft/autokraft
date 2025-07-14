@@ -8,5 +8,6 @@ fi
 app_dir_path="$1"
 
 rm -fr .tests/
+
 source testing-fw-venv/bin/activate
 python src/main.py "$app_dir_path"
