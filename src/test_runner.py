@@ -153,10 +153,10 @@ class TestRunner(Loggable):
             bool: True if the process run was successful, False otherwise.
         """
         run_script_path = os.path.join(run_target_dir, "run")
-        run_log_path = os.path.join(run_target_dir, "run.log")
+        self.run_log_path = os.path.join(run_target_dir, "run.log")
 
         # Start run script in background
-        with open(run_log_path, "w") as run_log_file:
+        with open(self.run_log_path, "w") as run_log_file:
             process = subprocess.Popen(
                 ["bash", run_script_path],
                 cwd=run_target_dir,
@@ -207,7 +207,7 @@ class TestRunner(Loggable):
             )
             run_log = result.stdout + result.stderr
             output = result.stdout.replace("\r", "").replace("\t", "").strip()
-            self.logger.info(f"Curl command output: {output}")
+            # self.logger.info(f"Curl command output: {output}")
             # self.logger.info(f"Curl command error: {result.stderr}")
 
             if result.returncode == 0:
@@ -224,6 +224,52 @@ class TestRunner(Loggable):
             return_code = -1
 
         return return_code, run_log
+
+    def _test_list_of_commands_run(self) -> tuple[int, str]:
+        """
+        Test the list of commands run for the target setup.
+
+        This method will execute the list of commands to test the target's run configuration.
+        """
+        self.logger.info(f"Testing list of commands run for target: {self.target.id}")
+
+        return_code, run_log = 0, ""
+
+        try:
+            for command in self.test_run_config.get("ListOfCommands", []):
+                self.logger.info(f"Executing command: {command}")
+                result = subprocess.run(
+                    list(command.split()),
+                    capture_output=True,
+                    text=True,
+                    timeout=4,
+                )
+                run_log = result.stdout + result.stderr
+                output = result.stdout.replace("\r", "").replace("\t", "").strip()
+
+                if result.returncode != 0:
+                    self.logger.warning(f"[✗] Command '{command}' failed with error: {result.stderr}")
+                    run_log += f"\n[✗] Command '{command}' failed\n"
+                    return_code = result.returncode
+                    break
+        except Exception as e:
+            self.logger.error(f"[✗] Error executing list of commands: {e}")
+            run_log += f"[✗] Error executing list of commands: {e}\n"
+            return_code = -1
+
+        return return_code, run_log
+
+    def _test_no_commands_run(self) -> tuple[int, str]:
+        """
+        Test the no commands run for the target setup.
+        """
+        self.logger.info(f"Testing no commands run for target: {self.target.id}")
+
+        # No commands to run, just return success
+        with open(self.run_log_path, "r") as run_log_file:
+            run_log = run_log_file.read()
+        
+        return 0, run_log
 
     def _validate_run(self, run_log: str) -> bool:
         """
@@ -367,7 +413,7 @@ class TestRunner(Loggable):
         self._update_build_report(self.target, build_return_code, build_success)
 
         if build_return_code == 0 and build_success:
-            self.logger.info(f"[✓] Build successful for target: {self.target.id} \n\n")
+            self.logger.info(f"[✓] Build successful for target: {self.target.id}")
 
             # Iterate over each of the runs
             for idx, run_config in enumerate(self.target.run_configs):
@@ -384,18 +430,27 @@ class TestRunner(Loggable):
                 )
                 time.sleep(self.test_run_config.get("UnikernelBootupTime", 20))
 
-                if self.test_run_config["TestingType"] == "curl":
-                    # Complete the curl test
-                    run_return_code, run_log = self._test_curl_run(run_config)
-                elif self.test_run_config["TestingType"] == "list-of-commands":
-                    # complete the list of commands test
-                    run_return_code, run_log = (
-                        -2,
-                        "Implementation for list-of-commands test is pending",
+                if self.test_run_config["TestingType"] == "curl" \
+                        or self.test_run_config["TestingType"] == "list-of-commands":
+                    if self.test_run_config["TestingType"] == "curl":
+                        # Complete the curl test
+                        run_return_code, run_log = self._test_curl_run(run_config)
+                    else:
+                        # complete the list of commands test
+                        run_return_code, run_log = self._test_list_of_commands_run()
+                    # Kill the running process
+                    running_process.terminate()
+                    self.logger.info(
+                        f"[✓] Target {self.target.id} with PID: {running_process.pid} has been terminated"
                     )
                 else:
+                    # Kill the running process
+                    running_process.terminate()
+                    self.logger.info(
+                        f"[✓] Target {self.target.id} with PID: {running_process.pid} has been terminated"
+                    )
                     # Test for no commands
-                    run_return_code, run_log = -2, "Implementation for no commands test is pending"
+                    run_return_code, run_log = self._test_no_commands_run()
 
                 # Now I need to validate the test
                 output_matched = self._validate_run(run_log)
@@ -406,11 +461,7 @@ class TestRunner(Loggable):
                 # Update the run report
                 self._update_run_report(run_config, self.target.id, run_return_code, output_matched)
 
-                # Kill the running process
-                running_process.terminate()
-                self.logger.info(
-                    f"[✓] Target {self.target.id} with PID: {running_process.pid} has been terminated"
-                )
+                
 
         else:
             self.logger.info(f"[✗] Build failed for target: {self.target.id}")

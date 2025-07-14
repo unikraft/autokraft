@@ -66,7 +66,7 @@ def main():
 
     try:
         t = TesterConfig()
-        a = AppConfig()
+        a = AppConfig(app_dir)
         a.generate_init(t)
         s = SystemConfig()
 

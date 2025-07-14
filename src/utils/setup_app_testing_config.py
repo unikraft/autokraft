@@ -24,6 +24,32 @@ class TestAppConfig(Loggable):
         else:
             self.base_test_dir = base_test_dir
 
+    def check_directory_exists(self, directory_path: Path) -> bool:
+        """
+        Check if the given directory exists.
+
+        Args:
+            directory_path: Path to the directory to check
+
+        Returns:
+            bool: True if directory exists, False otherwise
+        """
+        catalog_type, relative_path = self._extract_catalog_info(directory_path)
+
+        if not catalog_type or not relative_path:
+            raise ValueError(
+                f"Could not identify catalog or catalog-core in path: {directory_path}"
+            )
+        
+        filename = "RunConfig.yaml"
+        target_path = Path(self.base_test_dir) / catalog_type / relative_path / filename
+
+        if target_path.exists():         
+            self.logger.info(f"RunConfig.yaml already exists at {target_path}, skipping generation.")
+            return True
+
+        return False
+    
     def setup_config(self, source_directory: str) -> dict:
         """
         Process a catalog directory path and create a replica structure for testing.
@@ -97,7 +123,7 @@ class TestAppConfig(Loggable):
         Create only the directory structure without copying any files.
         """
         target_path.mkdir(parents=True, exist_ok=True)
-        print(f"Created directory structure: {target_path}")
+        self.logger.debug(f"Created directory structure: {target_path}")
 
     def _load_readme_data(self, source_path: Path) -> Optional[str]:
         """
@@ -120,10 +146,10 @@ class TestAppConfig(Loggable):
                         with open(readme_path, "r", encoding="latin-1") as f:
                             return f.read()
                     except Exception as e:
-                        print(f"Warning: Could not read {readme_path}: {e}")
+                        self.logger.warning(f"Warning: Could not read {readme_path}: {e}")
                         continue
                 except Exception as e:
-                    print(f"Warning: Could not read {readme_path}: {e}")
+                    self.logger.warning(f"Warning: Could not read {readme_path}: {e}")
                     continue
 
         return None
@@ -153,7 +179,7 @@ class TestAppConfig(Loggable):
             return str(response.content)
 
         except Exception as e:
-            print(f"Warning: Could not generate RunConfig using LLM: {e}")
+            self.logger.warning(f"Warning: Could not generate RunConfig using LLM: {e}")
             return "LLM generation failed. Please check the README content and try again."
 
     def _create_run_config_prompt(self, readme_content: str, relative_path: Path) -> str:
@@ -272,9 +298,9 @@ Do **not** include any commentary—only output the raw YAML.
         try:
             with open(config_path, "w", encoding="utf-8") as f:
                 f.write(content)
-            print(f"Configuration file saved at: {config_path}")
+            self.logger.info(f"Configuration file saved at: {config_path}")
         except Exception as e:
-            print(f"Warning: Could not save configuration file {config_path}: {e}")
+            self.logger.warning(f"Warning: Could not save configuration file {config_path}: {e}")
 
 
 def main(directory_path: str) -> dict:
@@ -283,12 +309,9 @@ def main(directory_path: str) -> dict:
     """
     try:
         test_config = TestAppConfig()
+        if test_config.check_directory_exists(Path(directory_path)):
+            return {}
         test_app_config = test_config.setup_config(directory_path)
-        print(f"Successfully processed: {directory_path}")
-        print(f"Catalog type: {test_app_config['catalog_type']}")
-        print(f"Target created at: {test_app_config['target_directory']}")
-        print(f"README content loaded: {len(test_app_config['readme_content'])} characters")
-        print(f"RunConfig.yaml generated and saved at: {test_app_config['run_config_path']}")
         return test_app_config
     except Exception as e:
         print(f"Error processing directory: {e}")
