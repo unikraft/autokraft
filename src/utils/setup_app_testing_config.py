@@ -2,9 +2,9 @@ import os
 from pathlib import Path
 from typing import Optional, Tuple
 from load_llm import LLMLoader
+from base import Loggable
 
-
-class TestAppConfig:
+class TestAppConfig(Loggable):
     """
     A class to handle test application configuration setup from catalog directories.
     """
@@ -16,6 +16,7 @@ class TestAppConfig:
         Args:
             base_test_dir: Base directory for test configuration (default: ./test-app-config)
         """
+        super().__init__()
         if base_test_dir is None:
             self.base_test_dir = os.path.join(os.getcwd(), "test-app-config")
         else:
@@ -149,8 +150,7 @@ class TestAppConfig:
             
         except Exception as e:
             print(f"Warning: Could not generate RunConfig using LLM: {e}")
-            # Return a basic template if LLM fails
-            return self._get_default_run_config_template(relative_path)
+            return "LLM generation failed. Please check the README content and try again."
     
     def _create_run_config_prompt(self, readme_content: str, relative_path: Path) -> str:
         """

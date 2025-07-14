@@ -11,9 +11,9 @@ import yaml
 
 from constants import SCRIPT_DIR
 from tester_config import TesterConfig
+from utils.base import Loggable
 
-
-class AppConfig:
+class AppConfig(Loggable):
     """Store application configuration.
 
     Configuration is read from the application configuration file (typically
@@ -159,8 +159,8 @@ class AppConfig:
             self.config["test_dir"] = data["test_dir"]
 
         if not "memory" in data.keys():
-            print(
-                f"Error: 'memory' attribute is not defined in {user_config_file}'", file=sys.stderr
+            self.logger.warning(
+                f"Error: 'memory' attribute is not defined in {user_config_file}."
             )
             sys.exit(1)
         else:
@@ -269,7 +269,7 @@ class AppConfig:
 
         if self.config["test_dir"]:
             # shank: Instance of 'AppConfig' has no 'user_config' member
-            test_dir = os.path.abspath(self.user_config["test_dir"])
+            test_dir = os.path.abspath(self.config["test_dir"])
         else:
             test_dir = os.path.abspath(".tests")
         if self.config["rootfs"]:
@@ -297,18 +297,20 @@ class AppConfig:
         with open(os.path.join(test_dir, "app_fs_init.sh"), "w", encoding="utf-8") as stream:
             stream.write(content)
         os.chmod(os.path.join(test_dir, "app_fs_init.sh"), 0o755)
-
+        
+        self.logger.info("Running app_fs_init.sh")
+        log_file_path = os.path.join(test_dir, "app_fs_init.log")
         try:
-            print("Running app_fs_init.sh")
-            result = subprocess.run(["bash", os.path.join(test_dir, "app_fs_init.sh")],
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE,
-                                        text=True)
-            if result.stderr:
-                print(f"Error: {result.stderr}", file=sys.stderr)
+            with open(log_file_path, "w", encoding="utf-8") as log_file:
+                result = subprocess.run(
+                    ["bash", os.path.join(test_dir, "app_fs_init.sh")],
+                    stdout=log_file,
+                    stderr=log_file,
+                    text=True
+                )
         except subprocess.CalledProcessError as e:
-            print(f"Error running app_fs_init.sh: {e}", file=sys.stderr)
-        print(f"Initialized application filesystem initrd.cpio is stored in {app_dir}/initrd.cpio")
+            self.logger.error(f"Error running app_fs_init.sh: {e}")
+        self.logger.info(f"Initialized application filesystem initrd.cpio is stored in {app_dir}/initrd.cpio")
         self.initrd_cpio_path = os.path.join(app_dir, "initrd.cpio")
         return 0 if self.initrd_cpio_path is None else 1, self.initrd_cpio_path
 
@@ -318,7 +320,7 @@ class AppConfig:
         Parse application config (`Kraftfile`) and user config (`config.yaml`)
         and populate all entries in the self.config dictionary.
         """
-
+        super().__init__()
         self.config = {}
         self._parse_user_config(user_config)
         self._parse_app_config(app_config)

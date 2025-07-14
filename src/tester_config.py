@@ -6,9 +6,9 @@ import itertools
 import sys
 
 import yaml
+from utils.base import Loggable
 
-
-class TesterConfig:
+class TesterConfig(Loggable):
     """Interact with tester configuration.
 
     Configuration is read from the global tester configuration file.
@@ -18,13 +18,14 @@ class TesterConfig:
     """
 
     def __init__(self, config_file="src/tester_config.yaml"):
+        super().__init__()
         try:
             with open(config_file, "r", encoding="utf8") as stream:
                 self.config = yaml.safe_load(stream)
                 self.variants = self._generate_variants()
                 self.target_configs = []
         except IOError:
-            print(f"Error: Unable to open configuration file '{config_file}'", file=sys.stderr)
+            self.logger.error(f"Error: Unable to open configuration file '{config_file}'", file=sys.stderr)
 
     def _generate_full_variants(self):
         """Generate all possible configuration variants.

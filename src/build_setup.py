@@ -286,7 +286,6 @@ class BuildSetup:
         os.chmod(os.path.join(self.dir, "build"), 0o755)
 
         if self.app_config.initrd_cpio_path is not None and os.path.exists(self.app_config.initrd_cpio_path):
-            print(f"Rootfs cpio file {self.app_config.initrd_cpio_path} is copied to the {target_dir}")
             result = subprocess.run(
                 ["cp", self.app_config.initrd_cpio_path, target_dir]
             )

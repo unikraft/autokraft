@@ -5,6 +5,7 @@ This module is the main entry point for the testing framework.
 import os
 import sys
 import json
+import logging
 
 from app_config import AppConfig
 from build_setup import BuildSetup
@@ -15,6 +16,7 @@ from test_runner import TestRunner
 from tester_config import TesterConfig
 from utils.cleanup import cleanup_folder
 from utils.file_utils import copy_common
+from utils.logger import setup_logger
 
 
 def generate_target_configs(tester_config, app_config, system_config):
@@ -54,10 +56,12 @@ def main():
     if len(sys.argv) != 2:
         usage(sys.argv[0])
         sys.exit(1)
+    
+    logger = logging.getLogger('test_framework')
 
     app_dir = os.path.abspath(sys.argv[1])
     if not os.path.exists(app_dir):
-        print(f"Not a file: {app_dir}", file=sys.stderr)
+        logger.error(f"Not a file: {app_dir}")
         sys.exit(1)
 
     try:

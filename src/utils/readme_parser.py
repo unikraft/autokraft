@@ -290,7 +290,6 @@ def update_config_from_readme(
     )
 
 
-# Example usage
 if __name__ == "__main__":
     try:
         update_config_from_readme("./.app")
