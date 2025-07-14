@@ -5,9 +5,9 @@ from README files and updates config.yaml with the extracted information.
 
 import os
 import re
-from pathlib import Path
-from typing import Dict, List, Tuple, Union, Optional
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
 
 import yaml
 
@@ -15,6 +15,7 @@ import yaml
 @dataclass
 class ParsedReadmeData:
     """Data class to hold parsed README information."""
+
     memory_values: List[str]  # e.g., ["256M", "512M"]
     port_mappings: List[Tuple[int, int]]  # e.g., [(8080, 80), (3000, 3000)]
     curl_urls: List[str]  # e.g., ["localhost:8888", "localhost:3000/api"]
@@ -32,33 +33,33 @@ class ReadmeParser:
             (?P<memory>\d+[KMG]?)     # memory value with optional unit
             ["\']?                    # optional closing quote
             """,
-            re.VERBOSE | re.IGNORECASE
+            re.VERBOSE | re.IGNORECASE,
         )
-        
+
         self.port_p_pattern = re.compile(
             r"""
             -p\s+                     # '-p' followed by whitespace
             (?P<host>\d+)\s*:\s*(?P<container>\d+)  # host:container
             """,
-            re.VERBOSE
+            re.VERBOSE,
         )
-        
+
         self.port_long_pattern = re.compile(
             r"""
             --port(?:=|\s+)           # '--port' followed by '=' or whitespace
             (?P<host2>\d+)\s*:\s*(?P<container2>\d+)
             """,
-            re.VERBOSE
+            re.VERBOSE,
         )
-        
+
         self.port_single_pattern = re.compile(
             r"""
             --port(?:=|\s+)           # '--port' followed by '=' or whitespace
             (?P<port>\d+)\b           # single port
             """,
-            re.VERBOSE
+            re.VERBOSE,
         )
-        
+
         # self.curl_pattern = re.compile(
         #     r"""
         #     curl\s+                   # 'curl' followed by whitespace
@@ -74,7 +75,7 @@ class ReadmeParser:
             (?:(?:--[a-zA-Z-]+(?:=\S+|\s+\S+)?)\s+)*  # optional curl flags (long form like --header)
             (?P<url>\S+)              # capture the URL (any non-whitespace characters)
             """,
-            re.VERBOSE | re.IGNORECASE
+            re.VERBOSE | re.IGNORECASE,
         )
 
     def find_readme_file(self, readme_dir: Union[str, Path]) -> Path:
@@ -87,7 +88,7 @@ class ReadmeParser:
         for fname in os.listdir(readme_dir):
             if re.match(r"(?i)^readme(\.[a-z0-9]+)?$", fname):
                 candidates.append(readme_dir / fname)
-        
+
         if not candidates:
             raise FileNotFoundError(f"No README file found in directory: {readme_dir!r}")
 
@@ -95,7 +96,7 @@ class ReadmeParser:
         for candidate in candidates:
             if candidate.name.lower() == "readme.md":
                 return candidate
-        
+
         # Return first candidate alphabetically for determinism
         candidates.sort(key=lambda p: p.name.lower())
         return candidates[0]
@@ -103,7 +104,7 @@ class ReadmeParser:
     def parse_readme(self, readme_path: Union[str, Path]) -> ParsedReadmeData:
         """Parse README file and extract memory, ports, and curl URLs."""
         readme_path = Path(readme_path)
-        
+
         try:
             text = readme_path.read_text(encoding="utf-8", errors="ignore")
         except Exception as e:
@@ -154,9 +155,7 @@ class ReadmeParser:
                 curl_urls.append(url)
 
         return ParsedReadmeData(
-            memory_values=memory_values,
-            port_mappings=port_mappings,
-            curl_urls=curl_urls
+            memory_values=memory_values, port_mappings=port_mappings, curl_urls=curl_urls
         )
 
     def update_config_from_readme(
@@ -165,11 +164,11 @@ class ReadmeParser:
         config_filename: str = "config.yaml",
         port_mapping_index: int = 0,
         memory_index: int = 0,
-        curl_index: int = 0
+        curl_index: int = 0,
     ) -> None:
         """
         Parse README and update config.yaml with extracted information.
-        
+
         Args:
             readme_dir: Directory containing README file
             config_filename: Name of config file to update
@@ -178,15 +177,15 @@ class ReadmeParser:
             curl_index: Index of curl URL to use (0-based)
         """
         readme_dir = Path(readme_dir)
-        
+
         # Find and parse README
         readme_path = self.find_readme_file(readme_dir)
         parsed_data = self.parse_readme(readme_path)
-        
+
         # Locate config.yaml in parent directory
         parent = readme_dir.parent
         config_path = parent / config_filename
-        
+
         if not config_path.is_file():
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
@@ -199,7 +198,7 @@ class ReadmeParser:
 
         # Update config with parsed data
         updates = {}
-        
+
         # Update port mappings
         if parsed_data.port_mappings:
             try:
@@ -212,7 +211,7 @@ class ReadmeParser:
                     f"port_mapping_index {port_mapping_index} out of range; "
                     f"only {len(parsed_data.port_mappings)} mapping(s) found"
                 )
-        
+
         # Update memory
         if parsed_data.memory_values:
             try:
@@ -228,8 +227,7 @@ class ReadmeParser:
         else:
             memory = config.get("memory", "256M")
             updates["memory"] = memory
-        
-        
+
         # Update curl URL
         if parsed_data.curl_urls:
             try:
@@ -261,10 +259,7 @@ class ReadmeParser:
 
         # Print summary
         update_summary = ", ".join(f"{k}={v}" for k, v in updates.items())
-        print(
-            f"Updated {config_path} with {update_summary} "
-            f"(from README: {readme_path})."
-        )
+        print(f"Updated {config_path} with {update_summary} " f"(from README: {readme_path}).")
 
 
 def update_config_from_readme(
@@ -272,11 +267,11 @@ def update_config_from_readme(
     config_filename: str = "config.yaml",
     port_mapping_index: int = 0,
     memory_index: int = 0,
-    curl_index: int = 0
+    curl_index: int = 0,
 ) -> None:
     """
     Convenience function to parse README and update config.yaml.
-    
+
     Args:
         readme_dir: Directory containing README file
         config_filename: Name of config file to update

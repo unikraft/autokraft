@@ -2,16 +2,17 @@
 THis module provides the BuildSetup class, which manages the build setup.
 """
 
-import os
 import logging
+import os
 import subprocess
 
 from constants import SCRIPT_DIR
 
 logging.basicConfig(
     level=logging.INFO,  # Set the logging level
-    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
+    format="%(asctime)s - %(levelname)s - %(message)s",  # Log format
 )
+
 
 class BuildSetup:
     """Manage build setup.
@@ -42,7 +43,7 @@ class BuildSetup:
             self.kernel_path = os.path.join(
                 os.path.join(os.path.join(self.dir, ".unikraft"), "bin"), "kernel"
             )
-    
+
     @staticmethod
     def get_build_tools(plat, arch):
         """Get the list the potential build tools."""
@@ -217,7 +218,7 @@ class BuildSetup:
 
             if self.app_config.config["rootfs"]:
                 if os.path.basename(self.app_config.config["rootfs"]) == "Dockerfile":
-                    rootfs = os.path.join(os.getcwd(),".app", self.app_config.config["rootfs"])
+                    rootfs = os.path.join(os.getcwd(), ".app", self.app_config.config["rootfs"])
                 else:
                     rootfs = os.path.join(self.dir, "rootfs")
                 stream.write(f"rootfs: {rootfs}\n\n")
@@ -243,7 +244,7 @@ class BuildSetup:
             idx = self.config["compiler"]["path"].find(self.config["compiler"]["type"])
             cross_compile = f"export CROSS_COMPILE={self.config['compiler']['path'][0:idx]}"
             compiler = self.config["compiler"]["path"][idx:]
-        
+
         return (cross_compile, compiler)
 
     def _generate_build_make(self):
@@ -285,10 +286,10 @@ class BuildSetup:
             stream.write(content)
         os.chmod(os.path.join(self.dir, "build"), 0o755)
 
-        if self.app_config.initrd_cpio_path is not None and os.path.exists(self.app_config.initrd_cpio_path):
-            result = subprocess.run(
-                ["cp", self.app_config.initrd_cpio_path, target_dir]
-            )
+        if self.app_config.initrd_cpio_path is not None and os.path.exists(
+            self.app_config.initrd_cpio_path
+        ):
+            result = subprocess.run(["cp", self.app_config.initrd_cpio_path, target_dir])
             if result.returncode != 0:
                 logging.error(
                     f"Failed to copy initrd cpio file from {self.app_config.initrd_cpio_path} to {target_dir}"
@@ -297,8 +298,6 @@ class BuildSetup:
             raise FileNotFoundError(
                 f"Initrd cpio file {self.app_config.initrd_cpio_path} does not exist."
             )
-        
-
 
     def _generate_build_kraft(self):
         """Generate build script for Kraft-based build."""

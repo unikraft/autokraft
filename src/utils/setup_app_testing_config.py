@@ -1,18 +1,20 @@
 import os
 from pathlib import Path
 from typing import Optional, Tuple
-from load_llm import LLMLoader
+
 from base import Loggable
+from load_llm import LLMLoader
+
 
 class TestAppConfig(Loggable):
     """
     A class to handle test application configuration setup from catalog directories.
     """
-    
+
     def __init__(self, base_test_dir: Optional[str] = None):
         """
         Initialize TestAppConfig.
-        
+
         Args:
             base_test_dir: Base directory for test configuration (default: ./test-app-config)
         """
@@ -21,42 +23,44 @@ class TestAppConfig(Loggable):
             self.base_test_dir = os.path.join(os.getcwd(), "test-app-config")
         else:
             self.base_test_dir = base_test_dir
-    
+
     def setup_config(self, source_directory: str) -> dict:
         """
         Process a catalog directory path and create a replica structure for testing.
-        
+
         Args:
             source_directory: Path like /home/machine/catalog/library/helloworld/1.2
-        
+
         Returns:
             dict: Configuration data including paths and README content
         """
         source_path = Path(source_directory)
-        
+
         # Extract catalog type and remaining path
         catalog_type, relative_path = self._extract_catalog_info(source_path)
-        
+
         if not catalog_type or not relative_path:
-            raise ValueError(f"Could not identify catalog or catalog-core in path: {source_directory}")
-        
+            raise ValueError(
+                f"Could not identify catalog or catalog-core in path: {source_directory}"
+            )
+
         # First, try to load README data
         readme_content = self._load_readme_data(source_path)
-        
+
         if readme_content is None:
             raise FileNotFoundError(f"No README file found in source directory: {source_directory}")
-        
+
         # Only if README is successfully loaded, create the directory structure
         target_path = Path(self.base_test_dir) / catalog_type / relative_path
         self._create_directory_structure_only(target_path)
-        
+
         # Generate RunConfig.yaml using LLM
         run_config_content = self._generate_run_config(readme_content, relative_path)
-        
+
         # Save RunConfig.yaml to target directory
         run_config_path = target_path / "RunConfig.yaml"
         self._save_config(run_config_path, run_config_content)
-        
+
         # creating BuildConfig.yaml
         build_config_path = target_path / "BuildConfig.yaml"
         self._save_config(build_config_path, "th_time: 180")
@@ -68,24 +72,24 @@ class TestAppConfig(Loggable):
             "target_directory": str(target_path),
             "readme_content": readme_content,
             "run_config_content": run_config_content,
-            "run_config_path": str(run_config_path)
+            "run_config_path": str(run_config_path),
         }
 
     def _extract_catalog_info(self, source_path: Path) -> Tuple[Optional[str], Optional[Path]]:
         """
         Extract catalog type and relative path from source directory.
-        
+
         Returns:
             Tuple of (catalog_type, relative_path_after_catalog)
         """
         parts = source_path.parts
-        
+
         for i, part in enumerate(parts):
             if part == "catalog-core":
-                return "catalog-core", Path(*parts[i+1:])
+                return "catalog-core", Path(*parts[i + 1 :])
             elif part == "catalog":
-                return "catalog", Path(*parts[i+1:])
-        
+                return "catalog", Path(*parts[i + 1 :])
+
         return None, None
 
     def _create_directory_structure_only(self, target_path: Path) -> None:
@@ -98,22 +102,22 @@ class TestAppConfig(Loggable):
     def _load_readme_data(self, source_path: Path) -> Optional[str]:
         """
         Load content from README file in the source directory.
-        
+
         Returns:
             README content as string, or None if not found
         """
         readme_files = ["README.md", "README.txt", "README", "readme.md", "readme.txt", "readme"]
-        
+
         for readme_name in readme_files:
             readme_path = source_path / readme_name
             if readme_path.exists() and readme_path.is_file():
                 try:
-                    with open(readme_path, 'r', encoding='utf-8') as f:
+                    with open(readme_path, "r", encoding="utf-8") as f:
                         return f.read()
                 except UnicodeDecodeError:
                     # Try with different encoding if UTF-8 fails
                     try:
-                        with open(readme_path, 'r', encoding='latin-1') as f:
+                        with open(readme_path, "r", encoding="latin-1") as f:
                             return f.read()
                     except Exception as e:
                         print(f"Warning: Could not read {readme_path}: {e}")
@@ -121,17 +125,17 @@ class TestAppConfig(Loggable):
                 except Exception as e:
                     print(f"Warning: Could not read {readme_path}: {e}")
                     continue
-        
+
         return None
 
     def _generate_run_config(self, readme_content: str, relative_path: Path) -> str:
         """
         Generate RunConfig.yaml content using LLM based on README content.
-        
+
         Args:
             readme_content: Content from README file
             relative_path: Relative path of the application
-        
+
         Returns:
             Generated RunConfig.yaml content as string
         """
@@ -139,32 +143,32 @@ class TestAppConfig(Loggable):
             # Initialize LLM
             llm_loader = LLMLoader()
             model = llm_loader.get_model()
-            
+
             # Create prompt for RunConfig generation
             prompt = self._create_run_config_prompt(readme_content, relative_path)
-            
+
             # Generate RunConfig using LLM
             response = model.invoke(prompt)
-            
+
             return str(response.content)
-            
+
         except Exception as e:
             print(f"Warning: Could not generate RunConfig using LLM: {e}")
             return "LLM generation failed. Please check the README content and try again."
-    
+
     def _create_run_config_prompt(self, readme_content: str, relative_path: Path) -> str:
         """
         Create a prompt for LLM to generate RunConfig.yaml.
-        
+
         Args:
             readme_content: README file content
             relative_path: Application relative path
-        
+
         Returns:
             Formatted prompt string
         """
         app_name = relative_path.name if relative_path.parts else "unknown"
-        
+
         prompt = f"""
 You are an expert AI assistant familiar with:
 
@@ -256,17 +260,17 @@ Do **not** include any commentary—only output the raw YAML.
 
 """
         return prompt
-    
+
     def _save_config(self, config_path: Path, content: str) -> None:
         """
         Save configuration content to file.
-        
+
         Args:
             config_path: Path where to save the configuration file
             content: Configuration content to save
         """
         try:
-            with open(config_path, 'w', encoding='utf-8') as f:
+            with open(config_path, "w", encoding="utf-8") as f:
                 f.write(content)
             print(f"Configuration file saved at: {config_path}")
         except Exception as e:
@@ -293,9 +297,10 @@ def main(directory_path: str) -> dict:
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) != 2:
         print("Usage: python setup_app_testing_config.py <directory_path>")
         sys.exit(1)
-    
+
     directory_path = sys.argv[1]
     main(directory_path)

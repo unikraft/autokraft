@@ -2,10 +2,10 @@
 This module is the main entry point for the testing framework.
 """
 
-import os
-import sys
 import json
 import logging
+import os
+import sys
 
 from app_config import AppConfig
 from build_setup import BuildSetup
@@ -46,7 +46,7 @@ def generate_target_configs(tester_config, app_config, system_config):
 
 
 def usage(argv0):
-    """Prints the usage instructions for the script."""    
+    """Prints the usage instructions for the script."""
     print(f"Usage: {argv0} <path/to/origina/app/dir>", file=sys.stderr)
 
 
@@ -56,8 +56,8 @@ def main():
     if len(sys.argv) != 2:
         usage(sys.argv[0])
         sys.exit(1)
-    
-    logger = logging.getLogger('test_framework')
+
+    logger = logging.getLogger("test_framework")
 
     app_dir = os.path.abspath(sys.argv[1])
     if not os.path.exists(app_dir):
