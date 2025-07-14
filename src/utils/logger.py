@@ -2,8 +2,9 @@
 import logging
 import os
 
-def setup_logger(name, log_file='logs/run.log', level=logging.INFO):
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+def setup_logger(name, log_file="logs/run.log", level=logging.INFO):
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
     file_handler = logging.FileHandler(log_file)

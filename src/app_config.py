@@ -1,5 +1,5 @@
 """
-This module defines the AppConfig class, which is used to extract and store application 
+This module defines the AppConfig class, which is used to extract and store application
 configuration.
 """
 
@@ -12,6 +12,7 @@ import yaml
 from constants import SCRIPT_DIR
 from tester_config import TesterConfig
 from utils.base import Loggable
+
 
 class AppConfig(Loggable):
     """Store application configuration.
@@ -64,7 +65,7 @@ class AppConfig(Loggable):
         Return true or false.
         """
 
-        return self.config["unikraft"] is not  None
+        return self.config["unikraft"] is not None
 
     def is_example(self):
         """Check if application is an example.
@@ -159,9 +160,7 @@ class AppConfig(Loggable):
             self.config["test_dir"] = data["test_dir"]
 
         if not "memory" in data.keys():
-            self.logger.warning(
-                f"Error: 'memory' attribute is not defined in {user_config_file}."
-            )
+            self.logger.warning(f"Error: 'memory' attribute is not defined in {user_config_file}.")
             sys.exit(1)
         else:
             self.config["memory"] = data["memory"]
@@ -297,7 +296,7 @@ class AppConfig(Loggable):
         with open(os.path.join(test_dir, "app_fs_init.sh"), "w", encoding="utf-8") as stream:
             stream.write(content)
         os.chmod(os.path.join(test_dir, "app_fs_init.sh"), 0o755)
-        
+
         self.logger.info("Running app_fs_init.sh")
         log_file_path = os.path.join(test_dir, "app_fs_init.log")
         try:
@@ -306,11 +305,13 @@ class AppConfig(Loggable):
                     ["bash", os.path.join(test_dir, "app_fs_init.sh")],
                     stdout=log_file,
                     stderr=log_file,
-                    text=True
+                    text=True,
                 )
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Error running app_fs_init.sh: {e}")
-        self.logger.info(f"Initialized application filesystem initrd.cpio is stored in {app_dir}/initrd.cpio")
+        self.logger.info(
+            f"Initialized application filesystem initrd.cpio is stored in {app_dir}/initrd.cpio"
+        )
         self.initrd_cpio_path = os.path.join(app_dir, "initrd.cpio")
         return 0 if self.initrd_cpio_path is None else 1, self.initrd_cpio_path
 

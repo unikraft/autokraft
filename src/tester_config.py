@@ -6,7 +6,9 @@ import itertools
 import sys
 
 import yaml
+
 from utils.base import Loggable
+
 
 class TesterConfig(Loggable):
     """Interact with tester configuration.
@@ -25,7 +27,9 @@ class TesterConfig(Loggable):
                 self.variants = self._generate_variants()
                 self.target_configs = []
         except IOError:
-            self.logger.error(f"Error: Unable to open configuration file '{config_file}'", file=sys.stderr)
+            self.logger.error(
+                f"Error: Unable to open configuration file '{config_file}'", file=sys.stderr
+            )
 
     def _generate_full_variants(self):
         """Generate all possible configuration variants.
