@@ -11,9 +11,10 @@ from subprocess import PIPE, Popen, run
 import yaml
 
 from target_setup import TargetSetup
+from utils.base import Loggable
 
 
-class TestRunner:
+class TestRunner(Loggable):
     """
     This TestRunner class is designed to manage the test execution.
     """
@@ -24,6 +25,7 @@ class TestRunner:
 
         :param targets: Specific TargetSetup object for TestRunner.
         """
+        super().__init__()
         self.target = target
         self.test_app_dir = os.path.join(
             os.getcwd(),
@@ -54,7 +56,7 @@ class TestRunner:
         if not os.path.exists(build_script_path):
             raise FileNotFoundError(f"Build script directory does not exist: {build_script_path}")
 
-        print("Building target:", self.target.id)
+        self.logger.info(f"Building target: {self.target.id}")
 
         # Initialize log files with headers
         self._write_log_file(
@@ -88,18 +90,18 @@ class TestRunner:
             )
             
             if result.returncode != 0:
-                print(f"[!] Build completed with non-zero exit code: {result.returncode}")
+                self.logger.info(f"[!] Build completed with non-zero exit code: {result.returncode}")
                 self._write_log_file(
                     self.target.build_config.dir, "build_stdout.log", f"\n=== BUILD FAILED with exit code {result.returncode} ===\n", mode="a+"
                 )
             else:
-                print(f"[✓] Build completed successfully")
+                self.logger.info(f"[✓] Build completed successfully")
                 self._write_log_file(
                     self.target.build_config.dir, "build_stdout.log", f"\n=== BUILD COMPLETED SUCCESSFULLY ===\n", mode="a+"
                 )
                 
         except subprocess.TimeoutExpired:
-            print(f"[✗] Build timed out after {threshold_timeout} seconds")
+            self.logger.info(f"[✗] Build timed out after {threshold_timeout} seconds")
             # Append timeout information to existing logs
             timeout_msg = f"\n=== BUILD TIMEOUT - Process killed after {threshold_timeout} seconds ===\n"
             self._write_log_file(
@@ -109,7 +111,7 @@ class TestRunner:
                 self.target.build_config.dir, "build_returncode.log", "-1", mode="w"
             )
         except Exception as e:
-            print(f"[✗] Build failed with exception: {e}")
+            self.logger.info(f"[✗] Build failed with exception: {e}")
             # Append error information to existing logs
             error_msg = f"\n=== BUILD ERROR: {str(e)} ===\n"
             self._write_log_file(
@@ -171,7 +173,7 @@ class TestRunner:
         Returns:
             bool: True if the test was successful, False otherwise.
         """
-        print(f"Testing target run in directory: {run_target_dir}")
+        self.logger.info(f"Testing target run in directory: {run_target_dir}")
 
         with open("config.yaml", "r") as f:
             app_config = yaml.safe_load(f)
@@ -183,14 +185,14 @@ class TestRunner:
         # If networking is enabled, send a curl request
         if networking_enabled:
             try:
-                print(f"Sending curl request: {curl_command} with timeout of 4 seconds")
+                self.logger.info(f"Sending curl request: {curl_command} with timeout of 4 seconds")
                 curl_result = run(
                     list(curl_command.split(" ")), capture_output=True, text=True, timeout=4
                 )
                 with open(curl_log_path, "a") as f:
                     f.write("STDOUT: \n" + curl_result.stdout)
                     f.write("STDERR: \n" + curl_result.stderr)
-                print(f"Curl request completed with stdout: {curl_result.stdout + curl_result.stderr}")
+                self.logger.info(f"Curl request completed with stdout: {curl_result.stdout + curl_result.stderr}")
             except Exception as e:
                 with open(curl_log_path, "w") as f:
                     f.write(f"[✗] Curl request failed: {e}")
@@ -205,12 +207,12 @@ class TestRunner:
                     or "bye" in log_content.lower()
                     or "hello" in log_content.lower()
                 ):
-                    print("[✓] Unikernel run test passed")
+                    self.logger.info("[✓] Unikernel run test passed")
                 else:
-                    print("[✗] Unikernel run test failed")
+                    self.logger.info("[✗] Unikernel run test failed")
                     return False
         else:
-            print("[✓] Networking is disabled, skipping curl test")
+            self.logger.info("[✓] Networking is disabled, skipping curl test")
             return False
         
         return True
@@ -221,7 +223,7 @@ class TestRunner:
 
         This method will execute the curl command to test the target's run configuration.
         """
-        print(f"Testing curl run for target: {self.target.id}")
+        self.logger.info(f"Testing curl run for target: {self.target.id}")
 
         test_command = self.test_run_config.get("ListOfCommands", ["curl http://localhost:8080"])[0]
         
@@ -232,7 +234,7 @@ class TestRunner:
             test_command = test_command.replace("http://", "")
             test_command = test_command.replace("localhost", "172.44.0.2")
         
-        print(f"Executing test command: {test_command}")
+        self.logger.info(f"Executing test command: {test_command}")
 
         try:
             result = subprocess.run(
@@ -242,19 +244,20 @@ class TestRunner:
                 timeout=4  # Timeout for the curl command
             )
             run_log = result.stdout + result.stderr
-            print(f"Curl command output: {result.stdout}")
-            # print(f"Curl command error: {result.stderr}")
+            output = result.stdout.replace('\r', '').replace('\t', '').strip()
+            self.logger.info(f"Curl command output: {output}")
+            # self.logger.info(f"Curl command error: {result.stderr}")
 
             if result.returncode == 0:
-                print("[✓] Curl test passed")
+                self.logger.info("[✓] Curl test passed")
                 run_log += "\n[✓] Curl command  executed\n"
             else:
-                print("[✗] Curl test failed")
+                self.logger.info("[✗] Curl test failed")
                 run_log += "\n[✗] Curl command failed\n"
 
             return_code = result.returncode
         except Exception as e:
-            print(f"[✗] Curl test encountered an error: {e}")
+            self.logger.info(f"[✗] Curl test encountered an error: {e}")
             run_log = f"[✗] Curl command failed with error: {e}\n"
             return_code = -1
 
@@ -273,12 +276,12 @@ class TestRunner:
             for word in output.split():
                 if word.lower() in run_log.lower():
                     string_found = True
-                    print(f"[✓] Found expected output: {output}")
+                    self.logger.info(f"[✓] Found expected output: {output}")
                     break
 
             if output.lower() in run_log.lower():
                 string_found = True
-                print(f"[✓] Found expected output: {output}")
+                self.logger.info(f"[✓] Found expected output: {output}")
                 break
         
         return string_found
@@ -323,7 +326,7 @@ class TestRunner:
 
         report_path = os.path.join(self.test_app_dir, "build_report.csv")
         self._write_row_to_csv(flat_dict, report_path)
-        print(f"[✓] Build report updated for target {target.id}")
+        self.logger.info(f"[✓] Build report updated for target {target.id}")
 
     def _update_run_report(self, run_config, build_no: int, run_return_code: int, output_matched: bool) -> None:
         """
@@ -353,7 +356,7 @@ class TestRunner:
 
         report_path = os.path.join(self.test_app_dir, "run_report.csv")
         self._write_row_to_csv(flat_dict, report_path)
-        print(f"[✓] Run report updated for target {run_config.dir.split('/')[-1]} with status {status}")
+        self.logger.info(f"[✓] Run report updated for target {run_config.dir.split('/')[-1]} with status {status}")
 
     def _write_log_file(self, directory: str, filename: str, data: str, mode: str = "w") -> str:
         """
@@ -374,11 +377,11 @@ class TestRunner:
             file_path = os.path.join(directory, filename)
             with open(file_path, mode, encoding="utf-8") as f:
                 f.write(data)
-            print(f"[✓] Log {'appended to' if 'a' in mode else 'written to'} {file_path}")
+            self.logger.info(f"[✓] Log {'appended to' if 'a' in mode else 'written to'} {file_path}")
             return file_path
         except Exception as e:
             error_message = f"Failed to write log to {filename} in {directory}: {e}"
-            print(f"[✗] {error_message}")
+            self.logger.error(f"[✗] {error_message}")
             raise Exception(error_message)
         
     def run_test(self) -> None:
@@ -387,7 +390,7 @@ class TestRunner:
 
         This method will execute the build and run configurations for the target.
         """
-        print(f"Running tests for target: {self.target.id}")
+        self.logger.info(f"Running tests for target: {self.target.id}")
         # Build the target before running tests(upto 2 mins)
         build_return_code = self._build_target()
         # Test if the build was successful
@@ -403,18 +406,18 @@ class TestRunner:
 
         
         if build_return_code == 0 and build_success:
-            print(f"[✓] Build successful for target: {self.target.id} \n\n")
+            self.logger.info(f"[✓] Build successful for target: {self.target.id} \n\n")
 
             # Iterate over each of the runs
             for idx, run_config in enumerate(self.target.run_configs):
 
-                print(f"Running configuration: {run_config.dir}")
-                # print(f"\tRun configuration of {idx + 1} is {run_config.config}")
+                self.logger.info(f"Running configuration: {run_config.dir}")
+                # self.logger.info(f"\tRun configuration of {idx + 1} is {run_config.config}")
                 running_process = self._run_target(run_config.dir)
-                print(f"[✓] Target {self.target.id} is running with PID: {running_process.pid}")
+                self.logger.info(f"[✓] Target {self.target.id} is running with PID: {running_process.pid}")
                
-                print(f"Waiting for the unikernel to start...40 seconds")
-                time.sleep(40) # waiting for 40 seconds for the unikernel to start
+                self.logger.info(f"Waiting for the unikernel to start...{self.test_run_config.get('UnikernelBootupTime', 20)} seconds")
+                time.sleep(self.test_run_config.get('UnikernelBootupTime', 20))
             
                 if self.test_run_config["TestingType"] == "curl":
                     # Complete the curl test
@@ -441,9 +444,9 @@ class TestRunner:
                 
                 # Kill the running process
                 running_process.terminate()
-                print(f"[✓] Target {self.target.id} with PID: {running_process.pid} has been terminated")
+                self.logger.info(f"[✓] Target {self.target.id} with PID: {running_process.pid} has been terminated")
 
         else:
-            print(f"[✗] Build failed for target: {self.target.id}")
+            self.logger.info(f"[✗] Build failed for target: {self.target.id}")
         
         return
