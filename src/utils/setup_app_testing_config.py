@@ -89,7 +89,7 @@ class TestAppConfig(Loggable):
 
         # creating BuildConfig.yaml
         build_config_path = target_path / "BuildConfig.yaml"
-        self._save_config(build_config_path, "th_time: 180")
+        self._save_config(build_config_path, "th_time: 300")
 
         return {
             "source_directory": str(source_path),
