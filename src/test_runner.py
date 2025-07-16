@@ -70,7 +70,7 @@ class TestRunner(Loggable):
             mode="w",
         )
 
-        threshold_timeout = self.test_build_config.get("th_time", 180)
+        threshold_timeout = self.test_build_config.get("th_time", 300)
 
         try:
             # Use subprocess.run with timeout for better control
@@ -191,7 +191,7 @@ class TestRunner(Loggable):
 
         # Check the networking configuration
         network_type = run_config.config.get("networking", "none")
-        if network_type == "bridge":
+        if network_type == "bridge" or network_type == "tap":
             test_command = test_command.replace("https://", "")
             test_command = test_command.replace("http://", "")
             test_command = test_command.replace("localhost", "172.44.0.2")

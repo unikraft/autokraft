@@ -58,6 +58,7 @@ def main():
         sys.exit(1)
 
     logger = logging.getLogger("test_framework")
+    logger.info("Main Started")
 
     app_dir = os.path.abspath(sys.argv[1])
     if not os.path.exists(app_dir):
