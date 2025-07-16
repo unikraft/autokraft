@@ -1,4 +1,4 @@
 #!/bin/bash
 
-rm -fr .tests
-rm -fr .app
+sudo rm -fr .tests
+sudo rm -fr .app
