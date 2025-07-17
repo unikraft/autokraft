@@ -19,7 +19,7 @@ class TargetSetup:
 
     class_id = 1
 
-    def __init__(self, config, app_config, system_config):
+    def __init__(self, config, app_config, system_config, session):
         """Initialize target setup.
 
         Use the config argument to initialize. Instantiate a BuildSetup class and
@@ -36,6 +36,7 @@ class TargetSetup:
         else:
             base = os.path.abspath(".tests")
         self.dir = os.path.join(base, f"{self.id:05d}")
+        self.session_dir = session.session_dir
         self.build_config = BuildSetup(self.dir, self.config["build"], self.config, app_config)
         self.run_configs = []
         idx = 1
@@ -68,15 +69,48 @@ class TargetSetup:
 
         # Create directory.
         os.mkdir(self.dir, mode=0o755)
+
+        tests_index = self.dir.find(".tests")
+        if tests_index == -1:
+            raise ValueError("Target directory must be inside .tests directory")
+        
+        tests_dir_structure = self.dir[tests_index + 1 :]
+
+        # Creating a new path for the sessions
+        # cwd + catalog_structure + session_name + test_dir_structure
+        self.session_build_dir = os.path.join(self.session_dir, tests_dir_structure)
+
         # Generate config.yaml.
         with open(os.path.join(self.dir, "config.yaml"), "w", encoding="utf-8") as outfile:
             outfile.write(f"base: {self.config['base']}\n")
             yaml.dump(self.config["build"], outfile, default_flow_style=False)
             if self.config["run"]["vmm"]:
                 outfile.write(f"vmm: {self.config['run']['vmm']['path']}\n")
+        # Creating duplicate config.yaml in session directory
+        os.makedirs(self.session_build_dir, exist_ok=True)
+        with open(os.path.join(self.session_build_dir, "config.yaml"), "w", encoding="utf-8") as outfile:
+            outfile.write(f"base: {self.config['base']}\n")
+            yaml.dump(self.config["build"], outfile, default_flow_style=False)
+            if self.config["run"]["vmm"]:
+                outfile.write(f"vmm: {self.config['run']['vmm']['path']}\n")
+        
         self.build_config.generate()
         for r in self.run_configs:
             os.mkdir(r.dir, mode=0o755)
             with open(os.path.join(r.dir, "config.yaml"), "w", encoding="utf-8") as outfile:
                 yaml.dump(r.config, outfile, default_flow_style=False)
+
+            # Creating duplicate runs/config.yaml in session directory
+            tests_index = r.dir.find(".tests")
+            if tests_index == -1:
+                print("[ERROR]Target run directory must be inside .tests directory")
+                raise ValueError("Target run directory must be inside .tests directory")
+
+            tests_dir_structure = r.dir[tests_index + 1 :]
+            session_run_dir = os.path.join(self.session_dir, tests_dir_structure)
+            os.makedirs(session_run_dir, exist_ok=True)
+
+            with open(os.path.join(session_run_dir, "config.yaml"), "w", encoding="utf-8") as outfile:
+                yaml.dump(r.config, outfile, default_flow_style=False)
+
             r.generate()
