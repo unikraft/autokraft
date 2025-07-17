@@ -137,7 +137,7 @@ class BuildSetup:
                 if os.path.basename(self.app_config.config["rootfs"]) == "Dockerfile":
                     rootfs = os.path.join(os.getcwd(), ".app", self.app_config.config["rootfs"])
                 else:
-                    rootfs = os.path.join(self.dir, "rootfs")
+                    rootfs = os.path.join(os.getcwd(), ".app", "rootfs")
                 stream.write(f"rootfs: {rootfs}\n\n")
 
             if self.app_config.config["cmd"]:
