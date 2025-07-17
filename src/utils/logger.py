@@ -4,6 +4,13 @@ import os
 
 
 def setup_logger(name, log_file="logs/run.log", level=logging.INFO):
+    """Set up the logger with the specified log level.
+
+    Args:
+        name: The name of the logger.
+        log_file: The file to which logs should be written.
+        level: The logging level to use. Default is INFO.
+    """
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
 

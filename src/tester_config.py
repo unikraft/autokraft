@@ -27,9 +27,7 @@ class TesterConfig(Loggable):
                 self.variants = self._generate_variants()
                 self.target_configs = []
         except IOError:
-            self.logger.error(
-                f"Error: Unable to open configuration file '{config_file}'"
-            )
+            self.logger.error(f"Error: Unable to open configuration file '{config_file}'")
 
     def _generate_full_variants(self):
         """Generate all possible configuration variants.

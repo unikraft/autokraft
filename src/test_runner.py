@@ -12,6 +12,7 @@ import yaml
 
 from target_setup import TargetSetup
 from utils.base import Loggable
+from utils.setup_session import SessionSetup
 
 
 class TestRunner(Loggable):
@@ -19,7 +20,7 @@ class TestRunner(Loggable):
     This TestRunner class is designed to manage the test execution.
     """
 
-    def __init__(self, target: TargetSetup, o_app_dir: str) -> None:
+    def __init__(self, target: TargetSetup, o_app_dir: str, session: SessionSetup) -> None:
         """
         Initialize the TestRunner with a specific target configrations.
 
@@ -34,11 +35,18 @@ class TestRunner(Loggable):
         if not os.path.exists(self.test_app_dir):
             raise FileNotFoundError(f"Test app directory does not exist: {self.test_app_dir}")
 
+        """
+        TODO: I/O operations makes it slow, so I will load 
+        the build and run configurations only once. 
+        """
         with open(os.path.join(self.test_app_dir, "BuildConfig.yaml"), "r") as f:
             self.test_build_config = yaml.safe_load(f)
 
         with open(os.path.join(self.test_app_dir, "RunConfig.yaml"), "r") as f:
             self.test_run_config = yaml.safe_load(f)
+
+        self.session_dir = session.session_dir
+        self.session_reports_dir = session.session_reports_dir
 
         return None
 
@@ -153,7 +161,18 @@ class TestRunner(Loggable):
             bool: True if the process run was successful, False otherwise.
         """
         run_script_path = os.path.join(run_target_dir, "run")
-        self.run_log_path = os.path.join(run_target_dir, "run.log")
+
+        tests_index = run_target_dir.find(".tests")
+        if tests_index == -1:
+            self.logger.error("Directory does not contain '.tests' segment, cannot write log file.")
+            raise ValueError("Directory does not contain '.tests' segment")
+        test_dir_structure = run_target_dir[tests_index + 1 :]
+
+        # Creating a new path for the sessions
+        # cwd + catalog_structure + session_name + test_dir_structure
+        self.run_log_dir = os.path.join(self.session_dir, test_dir_structure)
+        os.makedirs(self.run_log_dir, exist_ok=True)
+        self.run_log_path = os.path.join(self.run_log_dir, "run.log")
 
         # Start run script in background
         with open(self.run_log_path, "w") as run_log_file:
@@ -248,7 +267,9 @@ class TestRunner(Loggable):
                 output = result.stdout.replace("\r", "").replace("\t", "").strip()
 
                 if result.returncode != 0:
-                    self.logger.warning(f"[✗] Command '{command}' failed with error: {result.stderr}")
+                    self.logger.warning(
+                        f"[✗] Command '{command}' failed with error: {result.stderr}"
+                    )
                     run_log += f"\n[✗] Command '{command}' failed\n"
                     return_code = result.returncode
                     break
@@ -268,7 +289,7 @@ class TestRunner(Loggable):
         # No commands to run, just return success
         with open(self.run_log_path, "r") as run_log_file:
             run_log = run_log_file.read()
-        
+
         return 0, run_log
 
     def _validate_run(self, run_log: str) -> bool:
@@ -332,7 +353,7 @@ class TestRunner(Loggable):
             **build_config,
         }
 
-        report_path = os.path.join(self.test_app_dir, "build_report.csv")
+        report_path = os.path.join(self.session_reports_dir, "build_report.csv")
         self._write_row_to_csv(flat_dict, report_path)
         self.logger.info(f"[✓] Build report updated for target {target.id}")
 
@@ -364,7 +385,7 @@ class TestRunner(Loggable):
             **run_config.config,
         }
 
-        report_path = os.path.join(self.test_app_dir, "run_report.csv")
+        report_path = os.path.join(self.session_reports_dir, "run_report.csv")
         self._write_row_to_csv(flat_dict, report_path)
         self.logger.info(
             f"[✓] Run report updated for target {run_config.dir.split('/')[-1]} with status {status}"
@@ -384,6 +405,17 @@ class TestRunner(Loggable):
         Returns:
             str: The path to the log file if written successfully, otherwise an error message.
         """
+        # TODOs: Update this to the test app directory variable
+        tests_index = directory.find(".tests")
+        if tests_index == -1:
+            self.logger.error("Directory does not contain '.tests' segment, cannot write log file.")
+            raise ValueError("Directory does not contain '.tests' segment")
+        test_dir_structure = directory[tests_index + 1 :]
+
+        # Creating a new path for the sessions
+        # cwd + catalog_structure + session_name + test_dir_structure
+        directory = os.path.join(self.session_dir, test_dir_structure)
+
         try:
             os.makedirs(directory, exist_ok=True)  # Ensure the directory exists
             file_path = os.path.join(directory, filename)
@@ -430,8 +462,10 @@ class TestRunner(Loggable):
                 )
                 time.sleep(self.test_run_config.get("UnikernelBootupTime", 20))
 
-                if self.test_run_config["TestingType"] == "curl" \
-                        or self.test_run_config["TestingType"] == "list-of-commands":
+                if (
+                    self.test_run_config["TestingType"] == "curl"
+                    or self.test_run_config["TestingType"] == "list-of-commands"
+                ):
                     if self.test_run_config["TestingType"] == "curl":
                         # Complete the curl test
                         run_return_code, run_log = self._test_curl_run(run_config)
@@ -460,8 +494,6 @@ class TestRunner(Loggable):
 
                 # Update the run report
                 self._update_run_report(run_config, self.target.id, run_return_code, output_matched)
-
-                
 
         else:
             self.logger.info(f"[✗] Build failed for target: {self.target.id}")
