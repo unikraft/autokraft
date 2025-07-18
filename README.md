@@ -46,12 +46,14 @@ pip install -r requirements.txt
 ```
 
 4. Configure the Framework
-Open the configuration file: `src/tester_config.yaml`. Locate the following section & Update the base path to point to the absolute path of your local Unikraft repository setup.
+Open the configuration file: `src/config.yaml`. Locate the following section & Update the base path to point to the absolute path of your local Unikraft repository setup.
 
 ```yaml
 source:
   base: /absolute/path/to/your/unikraft/root
 ```
+
+> **Note:** If local Unikraft repository isn't already setup then you need to clone and setup this [repo](https://github.com/unikraft-upb/maintainer-tools/tree/staging/workdir).
 
 ### Sudo Setup 
 
@@ -69,7 +71,7 @@ This project uses a shell script that requires sudo access. To avoid being promp
     ```
 
     ```console
-    machine02 ALL=(ALL) NOPASSWD: /usr/bin/pkill, /usr/bin/kraft, /usr/sbin/ip, /usr/bin/rm, /usr/local/bin/firecracker-x86_64, /usr/bin/qemu-system-x86_64
+    machine02 ALL=(ALL) NOPASSWD: /usr/bin/pkill, /usr/bin/kraft, /usr/sbin/ip, /usr/bin/rm, /usr/local/bin/firecracker-x86_64, /usr/bin/qemu-system-x86_64, /usr/bin/qemu-system-arm
     
     Defaults env_keep += "KRAFTKIT_NO_WARN_SUDO KRAFTKIT_BUILDKIT_HOST"
     ```

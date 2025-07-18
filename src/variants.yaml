@@ -82,5 +82,3 @@ tools:
     #- arch: arm64
     #  type: fc
     #  path: ~/bin/fc
-source:
-  base: /home/machine02/maintainer-tools/workdir

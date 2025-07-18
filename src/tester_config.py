@@ -19,15 +19,18 @@ class TesterConfig(Loggable):
     Provide configurations for target definition: get_target_configs()
     """
 
-    def __init__(self, config_file="src/tester_config.yaml"):
+    def __init__(self, variants_file="src/variants.yaml", config_file="src/config.yaml"):
         super().__init__()
         try:
-            with open(config_file, "r", encoding="utf8") as stream:
+            with open(variants_file, "r", encoding="utf8") as stream:
                 self.config = yaml.safe_load(stream)
+                with open(config_file, "r", encoding="utf8") as stream:
+                    self.config.update(yaml.safe_load(stream))
                 self.variants = self._generate_variants()
                 self.target_configs = []
+            
         except IOError:
-            self.logger.error(f"Error: Unable to open configuration file '{config_file}'")
+            self.logger.error(f"Error: Unable to open configuration file '{variants_file}'")
 
     def _generate_full_variants(self):
         """Generate all possible configuration variants.
