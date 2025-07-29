@@ -93,6 +93,55 @@ def initialize_environment(app_dir: str) -> bool:
         return False
 
 
+def parse_target_numbers(target_arg):
+    """Parse target numbers from various input formats.
+    
+    Supports:
+    - Comma separated: "1,3,5"
+    - Space separated: "1 3 5" 
+    - Ranges: "1:5" or "1-5"
+    - Mixed: "1,3:5,7"
+    
+    Args:
+        target_arg: String containing target numbers in supported formats
+        
+    Returns:
+        set: Set of target numbers (0-based indexing)
+    """
+    if not target_arg:
+        return set()
+    
+    target_numbers = set()
+    
+    # Split by comma first to handle mixed formats
+    parts = target_arg.replace(' ', ',').split(',')
+    
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+            
+        # Handle range notation (: or -)
+        if ':' in part or '-' in part:
+            separator = ':' if ':' in part else '-'
+            try:
+                start, end = part.split(separator, 1)
+                start_num = int(start.strip()) - 1  # Convert to 0-based
+                end_num = int(end.strip()) - 1      # Convert to 0-based
+                if start_num <= end_num:
+                    target_numbers.update(range(start_num, end_num + 1))
+            except ValueError:
+                raise ValueError(f"Invalid range format: {part}")
+        else:
+            # Handle single number
+            try:
+                target_numbers.add(int(part.strip()) - 1)  # Convert to 0-based
+            except ValueError:
+                raise ValueError(f"Invalid target number: {part}")
+    
+    return target_numbers
+
+
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Testing Framework")
@@ -104,6 +153,12 @@ def parse_arguments():
         "-n",
         dest="test_session_name",
         help="Custom test session name (random will be selected if not provided)",
+    )
+    parser.add_argument(
+        "--target-no",
+        "-t",
+        dest="target_numbers",
+        help="Target numbers to test. Supports: comma-separated (1,3,5), space-separated (1 3 5), ranges (1:5 or 1-5), or mixed (1,3:5,7). Uses 1-based indexing.",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose output (debug level logs)"
@@ -148,10 +203,35 @@ def main():
         for t in targets:
             t.generate()
 
-        for target_config in targets:
+        # Parse target numbers if provided
+        selected_targets = None
+        if args.target_numbers:
+            try:
+                selected_targets = parse_target_numbers(args.target_numbers)
+                logger.info(f"Selected target numbers: {sorted([n+1 for n in selected_targets])}")
+                
+                # Validate target numbers are within range
+                if selected_targets and max(selected_targets) >= len(targets):
+                    logger.error(f"Target number out of range. Available targets: 1-{len(targets)}")
+                    sys.exit(1)
+            except ValueError as e:
+                logger.error(f"Invalid target number format: {e}")
+                sys.exit(1)
+
+        # Run tests for selected or all targets
+        tests_run = 0
+        for test_no, target_config in enumerate(targets):
+            # Skip if specific targets selected and this isn't one of them
+            if selected_targets is not None and test_no not in selected_targets:
+                logger.debug(f"Skipping target {test_no + 1}")
+                continue
+                
+            logger.info(f"Running target {test_no + 1} of {len(targets)}")
             runner = TestRunner(target_config, app_dir, session)
             runner.run_test()
-        logger.info("All tests completed successfully.")
+            tests_run += 1
+            
+        logger.info(f"Completed {tests_run} test(s) successfully.")
 
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
