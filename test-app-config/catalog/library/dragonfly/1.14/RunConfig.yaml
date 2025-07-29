@@ -1,0 +1,13 @@
+RunMetadata:
+  Memory: 256
+  Networking: true
+  ExposedPort: 6379
+  PublicPort: 6379
+
+TestingType: list-of-commands
+ListOfCommands:
+  - redis-cli -h localhost -p 6379 PING
+
+ExpectedOutput:
+  - PONG
+

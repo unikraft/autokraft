@@ -1,0 +1,12 @@
+RunConfig:
+  RunMetadata:
+    Memory: 64
+    Networking: true
+    ExternalPort: 8080
+    PublicPort: 8080
+
+  TestingType: curl
+  ListOfCommands: []
+
+  ExpectedOutput:
+    - "Hello from Unikraft!"

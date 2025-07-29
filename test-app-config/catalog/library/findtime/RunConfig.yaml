@@ -1,0 +1,14 @@
+RunMetadata:
+  Memory: 256
+  Networking: true
+  ExposedPort: 8080
+  PublicPort: 8080
+
+TestingType: curl
+ListOfCommands:
+  - "curl localhost:8080/?q=awesome_travis"
+
+ExpectedOutput:
+  - "HTTP/1.1 200 OK"
+  - "web-based calendar"
+  - "collected entries filled in"

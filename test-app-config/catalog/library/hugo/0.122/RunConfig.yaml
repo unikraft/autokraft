@@ -1,0 +1,14 @@
+RunMetadata:
+  Memory: 512
+  Networking: true
+  ExposedPort: 1313
+  PublicPort: 1313
+
+TestingType: curl
+ListOfCommands:
+  - curl localhost:1313
+
+ExpectedOutput:
+  - Hugo
+  - landing page
+  - HTTP/1.1 200 OK

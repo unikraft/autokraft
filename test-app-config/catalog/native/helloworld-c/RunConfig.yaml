@@ -1,0 +1,10 @@
+RunMetadata:
+  Memory: 256
+  Networking: false
+  ExposedPort: 0
+  PublicPort: 0
+
+TestingType: "no-command"
+
+ExpectedOutput:
+  - "Hello, World!"

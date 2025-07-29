@@ -1,0 +1,21 @@
+RunMetadata:
+  Memory: 512
+  Networking: true
+  ExposedPort: 8080
+  PublicPort: 8080
+
+TestingType: curl
+ListOfCommands:
+  - curl -s localhost:8080/health | jq
+
+ExpectedOutput:
+  - "uptime"
+  - "allocatedMemory"
+  - "totalAllocatedMemory"
+  - "goroutines"
+  - "completedGCCycles"
+  - "cpus"
+  - "maxHeapUsage"
+  - "heapInUse"
+  - "objectsInUse"
+  - "OSMemoryObtained"
