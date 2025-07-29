@@ -12,3 +12,4 @@ ListOfCommands:
 ExpectedOutput:
   - OK
   - "1"
+  - "Powered by"
