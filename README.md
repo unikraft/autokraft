@@ -71,7 +71,7 @@ This project uses a shell script that requires sudo access. To avoid being promp
     ```
 
     ```console
-    machine02 ALL=(ALL) NOPASSWD: /usr/bin/pkill, /usr/bin/kraft, /usr/sbin/ip, /usr/bin/rm, /usr/local/bin/firecracker-x86_64, /usr/bin/qemu-system-x86_64, /usr/bin/qemu-system-arm
+    machine02 ALL=(ALL) NOPASSWD: /usr/bin/pkill, /usr/bin/kraft, /usr/sbin/ip, /usr/bin/rm, /usr/local/bin/firecracker-x86_64, /usr/bin/qemu-system-x86_64, /usr/bin/qemu-system-arm, /usr/bin/qemu-system-aarch64
     
     Defaults env_keep += "KRAFTKIT_NO_WARN_SUDO KRAFTKIT_BUILDKIT_HOST"
     ```
