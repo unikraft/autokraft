@@ -1,0 +1,14 @@
+RunMetadata:
+  Memory: 512
+  Networking: true
+  ExposedPort: 3000
+  PublicPort: 3000
+
+TestingType: curl
+ListOfCommands:
+  - curl localhost:3000
+
+ExpectedOutput:
+  - "Hello, World!"
+  - "Powered by"
+  - "Pan"

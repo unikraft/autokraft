@@ -1,0 +1,12 @@
+RunConfig:
+  RunMetadata:
+    Memory: 64
+    Networking: false
+    ExternalPort: 0
+    PublicPort: 0
+
+  TestingType: no-command
+  ListOfCommands: []
+
+  ExpectedOutput:
+    - "Hello from Unikraft!"

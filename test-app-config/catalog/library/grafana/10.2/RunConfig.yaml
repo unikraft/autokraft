@@ -1,0 +1,17 @@
+RunMetadata:
+  Memory: 2048
+  Networking: true
+  ExposedPort: 3000
+  PublicPort: 3000
+
+TestingType: curl
+ListOfCommands:
+  - curl localhost:3000
+
+ExpectedOutput:
+  - HTTP/1.1 200
+  - Grafana
+  - Login
+  - Username
+  - Passwor
+  - html
