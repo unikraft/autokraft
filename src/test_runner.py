@@ -198,6 +198,24 @@ class TestRunner(Loggable):
 
         return True if os.path.exists(kernel_path) else False
 
+    def _update_test_command(self, test_command: str, network_type: str) -> str:
+        """
+        Update the test command based on the network type.
+
+        Args:
+            test_command (str): The original test command.
+            network_type (str): The type of network configuration.
+
+        Returns:
+            str: The updated test command.
+        """
+        if network_type == "bridge" or network_type == "tap":
+            test_command = test_command.replace("https://", "")
+            test_command = test_command.replace("http://", "")
+            test_command = test_command.replace("localhost", "172.44.0.2")
+        
+        return test_command
+
     def _test_curl_run(self, run_config) -> tuple[int, str]:
         """
         Test the curl run for the target setup.
@@ -207,13 +225,9 @@ class TestRunner(Loggable):
         self.logger.info(f"Testing curl run for target: {self.target.id}")
 
         test_command = self.test_run_config.get("ListOfCommands", ["curl http://localhost:8080"])[0]
-
-        # Check the networking configuration
         network_type = run_config.config.get("networking", "none")
-        if network_type == "bridge" or network_type == "tap":
-            test_command = test_command.replace("https://", "")
-            test_command = test_command.replace("http://", "")
-            test_command = test_command.replace("localhost", "172.44.0.2")
+       
+        test_command = self._update_test_command(test_command, network_type)
 
         self.logger.info(f"Executing test command: {test_command}")
 
@@ -244,7 +258,7 @@ class TestRunner(Loggable):
 
         return return_code, run_log
 
-    def _test_list_of_commands_run(self) -> tuple[int, str]:
+    def _test_list_of_commands_run(self, run_config) -> tuple[int, str]:
         """
         Test the list of commands run for the target setup.
 
@@ -256,6 +270,8 @@ class TestRunner(Loggable):
 
         try:
             for command in self.test_run_config.get("ListOfCommands", []):
+                network_type = run_config.config.get("networking", "none")
+                command = self._update_test_command(command, network_type)
                 self.logger.info(f"Executing command: {command}")
                 result = subprocess.run(
                     list(command.split()),
@@ -458,9 +474,9 @@ class TestRunner(Loggable):
                 )
 
                 self.logger.info(
-                    f"Waiting for the unikernel to start...{self.test_run_config.get('UnikernelBootupTime', 20)} seconds"
+                    f"Waiting for the unikernel to start...{self.test_run_config.get('UnikernelBootupTime', 10)} seconds"
                 )
-                time.sleep(self.test_run_config.get("UnikernelBootupTime", 20))
+                time.sleep(self.test_run_config.get("UnikernelBootupTime", 10))
 
                 if (
                     self.test_run_config["TestingType"] == "curl"
@@ -471,7 +487,7 @@ class TestRunner(Loggable):
                         run_return_code, run_log = self._test_curl_run(run_config)
                     else:
                         # complete the list of commands test
-                        run_return_code, run_log = self._test_list_of_commands_run()
+                        run_return_code, run_log = self._test_list_of_commands_run(run_config)
                     # Kill the running process
                     running_process.terminate()
                     self.logger.info(
