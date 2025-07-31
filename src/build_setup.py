@@ -220,7 +220,7 @@ class BuildSetup:
                 if os.path.basename(self.app_config.config["rootfs"]) == "Dockerfile":
                     rootfs = os.path.join(os.getcwd(), ".app", self.app_config.config["rootfs"])
                 else:
-                    rootfs = os.path.join(self.dir, "rootfs")
+                    rootfs = os.path.join(os.getcwd(), ".app", "rootfs")
                 stream.write(f"rootfs: {rootfs}\n\n")
 
             if self.app_config.config["cmd"]:
@@ -274,7 +274,7 @@ class BuildSetup:
 
         base = self.target_config["base"]
         target_dir = self.dir
-        rootfs = os.path.join(os.getcwd(), self.app_config.config["rootfs"])
+        rootfs = os.path.join(os.getcwd(), ".app", self.app_config.config["rootfs"])
         name = self.app_config.config["name"]
         # (cross_compile, compiler) = self._get_compiler_vars()
         compiler = self.config["compiler"]["path"]
@@ -306,7 +306,7 @@ class BuildSetup:
             raw_content = stream.read()
 
         if self.app_config.config["rootfs"]:
-            rootfs = os.path.join(os.getcwd(), self.app_config.config["rootfs"])
+            rootfs = os.path.join(os.getcwd(), ".app", self.app_config.config["rootfs"])
         else:
             rootfs = ""
         target_dir = self.dir

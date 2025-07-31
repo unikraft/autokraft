@@ -81,12 +81,47 @@ This project uses a shell script that requires sudo access. To avoid being promp
 To run the framework, use the following command:
 
 ```console
-./main.sh /absolute/path/to/app/dir
+python src/main.py /absolute/path/to/app/dir
 ```
 
 Make sure the path you provide is absolute (i.e., it starts with /). This should point to the specific application directory inside your catalog repository.
 
-##  Contributing
+
+### Command Line Arguments
+
+The framework supports the following optional arguments:
+
+- **`-n, --test-session-name`**: Specify a custom test session name. If not provided, a 'session' will be used as default name.
+  ```console
+  python src/main.py /absolute/path/to/app/dir -n my_test_session
+  ```
+
+- **`-t, --target-no`**: Run tests for specific targets only. Supports multiple formats:
+  - **Comma-separated**: `1,3,5` - Run targets 1, 3, and 5
+  - **Range with colon**: `1:5` - Run targets 1 through 5
+  - **Range with dash**: `1-5` - Run targets 1 through 5  
+  - **Mixed formats**: `1,3:5,7` - Run target 1, targets 3-5, and target 7
+  - **Space-separated**: `1 3 5` - Run targets 1, 3, and 5
+
+  ```console
+  # Run specific targets
+  python src/main.py /absolute/path/to/app/dir -t 1,3,5
+  
+  # Run a range of targets
+  python src/main.py /absolute/path/to/app/dir -t 1:5
+  
+  # Combined example with custom session name
+  python src/main.py /absolute/path/to/app/dir -n my_session -t 2:4,7
+  ```
+
+- **`-v, --verbose`**: Enable verbose output with debug-level logging.
+  ```console
+  python src/main.py /absolute/path/to/app/dir -v
+  ```
+
+**Note**: Target numbers use 1-based indexing (first target is 1, not 0). If no target numbers are specified, all available targets will be tested.
+
+## 🤝 Contributing
 
 We welcome contributions from the community!  
 If you're interested in contributing to this testing framework, please read our [CONTRIBUTING.md](./CONTRIBUTING.md) guide for instructions on how to get started.
