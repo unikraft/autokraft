@@ -181,7 +181,7 @@ class BuildSetup:
                     stream.write("\n")
                 stream.write("\n")
 
-            if "libraries" in self.app_config.config.keys():
+            if "libraries" in self.app_config.config.keys() and not self.app_config.is_example():
                 stream.write("libraries:\n")
                 for l in self.app_config.config["libraries"].keys():
                     lib_path = os.path.join(os.path.join(self.target_config["base"], "libs"), l)
