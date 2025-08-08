@@ -1,0 +1,20 @@
+RunMetadata:
+  Memory: 256
+  Networking: true
+  ExposedPort: 6379
+  PublicPort: 6379
+
+TestingType: list-of-commands
+ListOfCommands:
+  - "redis-cli -h localhost ping"
+  - "redis-cli -h localhost set a 1"
+  - "redis-cli -h localhost get a"
+
+ExpectedOutput:
+  - "PONG"
+  - "OK"
+  - "\"1\""
+  - "1"
+  - "Powered by"
+
+UnikernelBootupTime: 30

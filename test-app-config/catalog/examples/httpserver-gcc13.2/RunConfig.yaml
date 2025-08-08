@@ -1,7 +1,7 @@
 RunMetadata:
-  Memory: 256
+  Memory: 64
   Networking: true
-  ExposedPort: 80
+  ExposedPort: 8080
   PublicPort: 8080
 
 TestingType: curl
@@ -9,6 +9,4 @@ ListOfCommands:
   - curl localhost:8080
 
 ExpectedOutput:
-  - "Welcome to nginx!"
-  - "Hello World!"
-  - "Powered by"
+  - "Bye, World!"

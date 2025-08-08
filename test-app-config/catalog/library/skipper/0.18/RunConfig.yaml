@@ -1,0 +1,12 @@
+RunMetadata:
+  Memory: 512
+  Networking: true
+  ExposedPort: 9090
+  PublicPort: 9090
+
+TestingType: curl
+ListOfCommands:
+  - curl localhost:9090
+
+ExpectedOutput:
+  - "Hello, World!"
