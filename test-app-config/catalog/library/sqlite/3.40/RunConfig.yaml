@@ -1,0 +1,9 @@
+RunMetadata:
+  Memory: 256
+  Networking: false
+  ExposedPort: 8080
+  PublicPort: 8080
+
+TestingType: no-command
+ExpectedOutput:
+  - "SQL script output"
