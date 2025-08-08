@@ -234,4 +234,5 @@ server.py
 
 # Ignore sessions reports and logs
 .sessions/
+logs
 
