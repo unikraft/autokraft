@@ -20,7 +20,7 @@ from utils.cleanup import cleanup_folder
 from utils.file_utils import copy_common
 from utils.logger import setup_logger
 from utils.setup_session import SessionSetup
-from constants import set_tests_folder, get_tests_folder
+from constants import set_tests_folder, get_tests_folder, set_app_folder, get_app_folder
 
 
 def generate_target_configs(tester_config, app_config, system_config, session):
@@ -49,13 +49,14 @@ def generate_target_configs(tester_config, app_config, system_config, session):
     return targets
 
 
-def initialize_environment(app_dir: str, tests_dir: str = "") -> bool:
+def initialize_environment(app_dir: str, tests_dir: str = "", app_folder: str = "") -> bool:
     """
     Perform initial cleanup and setup configs needed before running tests.
 
     Args:
         app_dir: Path to the application directory to be tested
         tests_dir: Custom tests directory name (optional)
+        app_folder: Custom app folder name (optional)
 
     Returns:
         bool: True if initialization succeeded, False otherwise
@@ -65,24 +66,29 @@ def initialize_environment(app_dir: str, tests_dir: str = "") -> bool:
     try:
         cwd = os.getcwd()
 
-        # Call the cleanup script with custom tests directory
+        # Call the cleanup script with custom directories
         logger.info("Running cleanup script")
         cleanup_script = os.path.join(cwd, "scripts", "utils", "cleanup.sh")
         if os.path.exists(cleanup_script):
             cleanup_args = [cleanup_script]
             if tests_dir != "":
                 cleanup_args.append(tests_dir)
+            if app_folder != "":
+                cleanup_args.append(app_folder)
             result = subprocess.run(cleanup_args, check=True, text=True, capture_output=True)
             logger.debug(f"Cleanup output: {result.stdout}")
         else:
             logger.warning(f"Cleanup script not found: {cleanup_script}")
 
-        # Call the setup script with app_dir as argument
+        # Call the setup script with app_dir and custom app_folder as arguments
         logger.info(f"Running setup script for {app_dir}")
         setup_script = os.path.join(cwd, "scripts", "utils", "setup.sh")
         if os.path.exists(setup_script):
+            setup_args = [setup_script, app_dir]
+            if app_folder != "":
+                setup_args.append(app_folder)
             result = subprocess.run(
-                [setup_script, app_dir], check=True, text=True, capture_output=True
+                setup_args, check=True, text=True, capture_output=True
             )
             logger.debug(f"Setup output: {result.stdout}")
         else:
@@ -166,6 +172,12 @@ def parse_arguments():
         help="Custom tests directory name (default: .tests). Will be created if it doesn't exist.",
     )
     parser.add_argument(
+        "--app-dir-name",
+        "-a",
+        dest="app_dir_name",
+        help="Custom app directory name (default: .app). Will be created if it doesn't exist.",
+    )
+    parser.add_argument(
         "--target-no",
         "-t",
         dest="target_numbers",
@@ -183,10 +195,12 @@ def main():
 
     args = parse_arguments()
 
-    # Set custom tests directory if provided
+    # Set custom directories if provided
     if args.tests_dir:
         set_tests_folder(args.tests_dir)
-        # logger.info(f"Using custom tests directory: {get_tests_folder()}")
+
+    if args.app_dir_name:
+        set_app_folder(args.app_dir_name)
 
     # Set up logger with appropriate verbosity
     log_level = logging.DEBUG if args.verbose else logging.INFO
@@ -200,7 +214,7 @@ def main():
         logger.error(f"Not a file: {app_dir}")
         sys.exit(1)
 
-    if not initialize_environment(app_dir, args.tests_dir):
+    if not initialize_environment(app_dir, args.tests_dir, args.app_dir_name):
         logger.error("Environment initialization failed. Exiting.")
         sys.exit(1)
 
@@ -208,6 +222,7 @@ def main():
         session = SessionSetup(app_dir, custom_session_name=args.test_session_name)
         logger.info(f"Session initialized: {session.session_name}")
         logger.info(f"Using tests directory: {get_tests_folder()}")
+        logger.info(f"Using app directory: {get_app_folder()}")
         t = TesterConfig()
         a = AppConfig(app_dir)
         a.generate_init(t)
@@ -218,6 +233,7 @@ def main():
             # TODO: Check if runtimes already exist l: 
             logger.info(f"Generating runtimes...{a.config['runtime']}")
             
+            # TODO: Also remove this non persistent session before exiting
         else:
             logger.info("Runtimes already exist, skipping generation.")
         copy_common()

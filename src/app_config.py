@@ -9,7 +9,7 @@ import sys
 
 import yaml
 
-from constants import SCRIPT_DIR, get_tests_folder
+from constants import SCRIPT_DIR, get_tests_folder, get_app_folder
 from tester_config import TesterConfig
 from utils.base import Loggable
 
@@ -276,11 +276,11 @@ class AppConfig(Loggable):
         else:
             test_dir = os.path.abspath(get_tests_folder())
         if self.config["rootfs"]:
-            rootfs = os.path.join(os.getcwd(), ".app", self.config["rootfs"])
+            rootfs = os.path.join(os.getcwd(), get_app_folder(), self.config["rootfs"])
         else:
             rootfs = ""
         init_dir = os.getcwd()
-        test_app_dir = os.path.join(init_dir, ".app")
+        test_app_dir = os.path.join(init_dir, get_app_folder())
         base = tester_config.config["source"]["base"]
 
         name = self.config["name"]
@@ -319,7 +319,7 @@ class AppConfig(Loggable):
         self.initrd_cpio_path = os.path.join(app_dir, "initrd.cpio")
         return 0 if self.initrd_cpio_path is None else 1, self.initrd_cpio_path
 
-    def __init__(self, app_dir: str, app_config=".app/Kraftfile", run_config="RunConfig.yaml"):
+    def __init__(self, app_dir: str, app_config=None, run_config="RunConfig.yaml"):
         """Initialize application configuration.
 
         Parse application config (`Kraftfile`) and user run_config (`RunConfig.yaml`)
@@ -329,6 +329,9 @@ class AppConfig(Loggable):
         self.app_dir = app_dir
         self.config = {}
         self._parse_user_config(run_config)
+        # Use dynamic app config path if not provided
+        if app_config is None:
+            app_config = os.path.join(get_app_folder(), "Kraftfile")
         self._parse_app_config(app_config)
         self.initrd_cpio_path = None
 
