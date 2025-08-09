@@ -184,6 +184,12 @@ def parse_arguments():
         help="Target numbers to test. Supports: comma-separated (1,3,5), space-separated (1 3 5), ranges (1:5 or 1-5), or mixed (1,3:5,7). Uses 1-based indexing.",
     )
     parser.add_argument(
+        "--generate-only",
+        "-g",
+        action="store_true",
+        help="Only generate target configurations and exit without running tests",
+    )
+    parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose output (debug level logs)"
     )
 
@@ -225,7 +231,6 @@ def main():
         logger.info(f"Using app directory: {get_app_folder()}")
         t = TesterConfig()
         a = AppConfig(app_dir)
-        a.generate_init(t)
         s = SystemConfig()
 
         # here we can generate the runtimes if not created yet
@@ -238,10 +243,19 @@ def main():
             logger.info("Runtimes already exist, skipping generation.")
         copy_common()
 
+        a.generate_init(t)
+
         targets = generate_target_configs(t, a, s, session=session)
 
         for t in targets:
             t.generate()
+
+        logger.info(f"Generated {len(targets)} target configuration(s) successfully.")
+
+        # Exit early if generate-only flag is set
+        if args.generate_only:
+            logger.info("Generate-only mode enabled. Exiting without running tests.")
+            return
 
         # Parse target numbers if provided
         selected_targets = None
