@@ -20,6 +20,7 @@ from utils.cleanup import cleanup_folder
 from utils.file_utils import copy_common
 from utils.logger import setup_logger
 from utils.setup_session import SessionSetup
+from constants import set_tests_folder, get_tests_folder
 
 
 def generate_target_configs(tester_config, app_config, system_config, session):
@@ -48,12 +49,13 @@ def generate_target_configs(tester_config, app_config, system_config, session):
     return targets
 
 
-def initialize_environment(app_dir: str) -> bool:
+def initialize_environment(app_dir: str, tests_dir: str = "") -> bool:
     """
     Perform initial cleanup and setup configs needed before running tests.
 
     Args:
         app_dir: Path to the application directory to be tested
+        tests_dir: Custom tests directory name (optional)
 
     Returns:
         bool: True if initialization succeeded, False otherwise
@@ -63,11 +65,14 @@ def initialize_environment(app_dir: str) -> bool:
     try:
         cwd = os.getcwd()
 
-        # Call the cleanup script
+        # Call the cleanup script with custom tests directory
         logger.info("Running cleanup script")
         cleanup_script = os.path.join(cwd, "scripts", "utils", "cleanup.sh")
         if os.path.exists(cleanup_script):
-            result = subprocess.run([cleanup_script], check=True, text=True, capture_output=True)
+            cleanup_args = [cleanup_script]
+            if tests_dir != "":
+                cleanup_args.append(tests_dir)
+            result = subprocess.run(cleanup_args, check=True, text=True, capture_output=True)
             logger.debug(f"Cleanup output: {result.stdout}")
         else:
             logger.warning(f"Cleanup script not found: {cleanup_script}")
@@ -155,6 +160,12 @@ def parse_arguments():
         help="Custom test session name (random will be selected if not provided)",
     )
     parser.add_argument(
+        "--tests-dir",
+        "-d",
+        dest="tests_dir",
+        help="Custom tests directory name (default: .tests). Will be created if it doesn't exist.",
+    )
+    parser.add_argument(
         "--target-no",
         "-t",
         dest="target_numbers",
@@ -172,6 +183,11 @@ def main():
 
     args = parse_arguments()
 
+    # Set custom tests directory if provided
+    if args.tests_dir:
+        set_tests_folder(args.tests_dir)
+        # logger.info(f"Using custom tests directory: {get_tests_folder()}")
+
     # Set up logger with appropriate verbosity
     log_level = logging.DEBUG if args.verbose else logging.INFO
     setup_logger("test_framework", level=log_level)
@@ -184,18 +200,26 @@ def main():
         logger.error(f"Not a file: {app_dir}")
         sys.exit(1)
 
-    if not initialize_environment(app_dir):
+    if not initialize_environment(app_dir, args.tests_dir):
         logger.error("Environment initialization failed. Exiting.")
         sys.exit(1)
 
     try:
         session = SessionSetup(app_dir, custom_session_name=args.test_session_name)
         logger.info(f"Session initialized: {session.session_name}")
+        logger.info(f"Using tests directory: {get_tests_folder()}")
         t = TesterConfig()
         a = AppConfig(app_dir)
         a.generate_init(t)
         s = SystemConfig()
 
+        # here we can generate the runtimes if not created yet
+        if a.config["runtime"] is not None:
+            # TODO: Check if runtimes already exist l: 
+            logger.info(f"Generating runtimes...{a.config['runtime']}")
+            
+        else:
+            logger.info("Runtimes already exist, skipping generation.")
         copy_common()
 
         targets = generate_target_configs(t, a, s, session=session)
