@@ -215,14 +215,16 @@ src/__pycache__
 src/utils/__pycache__
 
 # Ignoreing test files and directories
-.tests
+.tests/
+.runtime_tests/
 
 # Ignoring Application Setup file
 Kraftfile
 server.py
 
 .app/
-.rootfs-for-testing
+.rootfs-for-testing/
+.runtime_app/
 
 
 # Environment variables

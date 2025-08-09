@@ -71,9 +71,9 @@ def initialize_environment(app_dir: str, tests_dir: str = "", app_folder: str = 
         cleanup_script = os.path.join(cwd, "scripts", "utils", "cleanup.sh")
         if os.path.exists(cleanup_script):
             cleanup_args = [cleanup_script]
-            if tests_dir != "":
+            if tests_dir != "" and tests_dir is not None:
                 cleanup_args.append(tests_dir)
-            if app_folder != "":
+            if app_folder != "" and app_folder is not None:
                 cleanup_args.append(app_folder)
             result = subprocess.run(cleanup_args, check=True, text=True, capture_output=True)
             logger.debug(f"Cleanup output: {result.stdout}")
@@ -85,7 +85,8 @@ def initialize_environment(app_dir: str, tests_dir: str = "", app_folder: str = 
         setup_script = os.path.join(cwd, "scripts", "utils", "setup.sh")
         if os.path.exists(setup_script):
             setup_args = [setup_script, app_dir]
-            if app_folder != "":
+            print(setup_args)
+            if app_folder != "" and app_folder is not None:
                 setup_args.append(app_folder)
             result = subprocess.run(
                 setup_args, check=True, text=True, capture_output=True
@@ -237,7 +238,21 @@ def main():
         if a.config["runtime"] is not None:
             # TODO: Check if runtimes already exist l: 
             logger.info(f"Generating runtimes...{a.config['runtime']}")
-            
+            # Call the new_session.sh script
+            cwd = os.getcwd()
+            new_session_script = os.path.join(cwd, "scripts", "utils", "new_session.sh")
+            if os.path.exists(new_session_script):
+                try:
+                    result = subprocess.run(
+                        [new_session_script], check=True, text=True, capture_output=True
+                    )
+                    logger.debug(f"New session script output: {result.stdout}")
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"New session script execution failed: {e}")
+                    logger.error(f"Error output: {e.stderr}")
+                    sys.exit(1)
+            else:
+                logger.warning(f"New session script not found: {new_session_script}")
             # TODO: Also remove this non persistent session before exiting
         else:
             logger.info("Runtimes already exist, skipping generation.")
