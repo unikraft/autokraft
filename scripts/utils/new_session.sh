@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# get the library path in one variable lib_path
+source testing-fw-venv/bin/activate
 
-# create a new session of the same testing framework in another directory.
-
+# TODO: Later need to add runtime path
+python src/main.py  /home/machine02/catalog/library/base --tests-dir .runtime_tests --app-dir-name .runtime_app --generate-only
