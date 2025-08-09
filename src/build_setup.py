@@ -6,7 +6,7 @@ import logging
 import os
 import subprocess
 
-from constants import SCRIPT_DIR
+from constants import SCRIPT_DIR, get_app_folder
 
 logging.basicConfig(
     level=logging.INFO,  # Set the logging level
@@ -135,9 +135,9 @@ class BuildSetup:
 
             if self.app_config.config["rootfs"]:
                 if os.path.basename(self.app_config.config["rootfs"]) == "Dockerfile":
-                    rootfs = os.path.join(os.getcwd(), ".app", self.app_config.config["rootfs"])
+                    rootfs = os.path.join(os.getcwd(), get_app_folder(), self.app_config.config["rootfs"])
                 else:
-                    rootfs = os.path.join(os.getcwd(), ".app", "rootfs")
+                    rootfs = os.path.join(os.getcwd(), get_app_folder(), "rootfs")
                 stream.write(f"rootfs: {rootfs}\n\n")
 
             if self.app_config.config["cmd"]:
@@ -218,9 +218,9 @@ class BuildSetup:
 
             if self.app_config.config["rootfs"]:
                 if os.path.basename(self.app_config.config["rootfs"]) == "Dockerfile":
-                    rootfs = os.path.join(os.getcwd(), ".app", self.app_config.config["rootfs"])
+                    rootfs = os.path.join(os.getcwd(), get_app_folder(), self.app_config.config["rootfs"])
                 else:
-                    rootfs = os.path.join(os.getcwd(), ".app", "rootfs")
+                    rootfs = os.path.join(os.getcwd(), get_app_folder(), "rootfs")
                 stream.write(f"rootfs: {rootfs}\n\n")
 
             if self.app_config.config["cmd"]:
@@ -274,7 +274,7 @@ class BuildSetup:
 
         base = self.target_config["base"]
         target_dir = self.dir
-        rootfs = os.path.join(os.getcwd(), ".app", self.app_config.config["rootfs"])
+        rootfs = os.path.join(os.getcwd(), get_app_folder(), self.app_config.config["rootfs"])
         name = self.app_config.config["name"]
         # (cross_compile, compiler) = self._get_compiler_vars()
         compiler = self.config["compiler"]["path"]
@@ -306,7 +306,7 @@ class BuildSetup:
             raw_content = stream.read()
 
         if self.app_config.config["rootfs"]:
-            rootfs = os.path.join(os.getcwd(), ".app", self.app_config.config["rootfs"])
+            rootfs = os.path.join(os.getcwd(), get_app_folder(), self.app_config.config["rootfs"])
         else:
             rootfs = ""
         target_dir = self.dir
