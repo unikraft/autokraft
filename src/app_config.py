@@ -9,7 +9,7 @@ import sys
 
 import yaml
 
-from constants import SCRIPT_DIR
+from constants import SCRIPT_DIR, get_tests_folder
 from tester_config import TesterConfig
 from utils.base import Loggable
 
@@ -228,6 +228,8 @@ class AppConfig(Loggable):
             self.config["runtime"] = None
         else:
             self.config["runtime"] = data["runtime"]
+            if self.is_example():
+                self.config["runtime"] = self.config["runtime"].split(":")[0] + ":local"
 
         if not "targets" in data.keys():
             self.config["targets"] = None
@@ -272,7 +274,7 @@ class AppConfig(Loggable):
             # shank: Instance of 'AppConfig' has no 'user_config' member
             test_dir = os.path.abspath(self.config["test_dir"])
         else:
-            test_dir = os.path.abspath(".tests")
+            test_dir = os.path.abspath(get_tests_folder())
         if self.config["rootfs"]:
             rootfs = os.path.join(os.getcwd(), ".app", self.config["rootfs"])
         else:

@@ -13,6 +13,7 @@ import yaml
 from target_setup import TargetSetup
 from utils.base import Loggable
 from utils.setup_session import SessionSetup
+from constants import get_tests_folder
 
 
 class TestRunner(Loggable):
@@ -162,10 +163,10 @@ class TestRunner(Loggable):
         """
         run_script_path = os.path.join(run_target_dir, "run")
 
-        tests_index = run_target_dir.find(".tests")
+        tests_index = run_target_dir.find(get_tests_folder())
         if tests_index == -1:
-            self.logger.error("Directory does not contain '.tests' segment, cannot write log file.")
-            raise ValueError("Directory does not contain '.tests' segment")
+            self.logger.error(f"Directory does not contain '{get_tests_folder()}' segment, cannot write log file.")
+            raise ValueError(f"Directory does not contain '{get_tests_folder()}' segment")
         test_dir_structure = run_target_dir[tests_index + 1 :]
 
         # Creating a new path for the sessions
@@ -422,10 +423,10 @@ class TestRunner(Loggable):
             str: The path to the log file if written successfully, otherwise an error message.
         """
         # TODOs: Update this to the test app directory variable
-        tests_index = directory.find(".tests")
+        tests_index = directory.find(get_tests_folder())
         if tests_index == -1:
-            self.logger.error("Directory does not contain '.tests' segment, cannot write log file.")
-            raise ValueError("Directory does not contain '.tests' segment")
+            self.logger.error(f"Directory does not contain '{get_tests_folder()}' segment, cannot write log file.")
+            raise ValueError(f"Directory does not contain '{get_tests_folder()}' segment")
         test_dir_structure = directory[tests_index + 1 :]
 
         # Creating a new path for the sessions

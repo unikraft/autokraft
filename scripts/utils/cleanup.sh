@@ -1,4 +1,7 @@
 #!/bin/bash
 
-sudo rm -fr .tests
+# Default tests directory
+TESTS_DIR="${1:-.tests}"
+
+sudo rm -fr "$TESTS_DIR"
 sudo rm -fr .app

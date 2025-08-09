@@ -8,6 +8,7 @@ import yaml
 
 from build_setup import BuildSetup
 from run_setup import RunSetup
+from constants import get_tests_folder
 
 
 class TargetSetup:
@@ -34,7 +35,7 @@ class TargetSetup:
         if app_config.config["test_dir"]:
             base = os.path.abspath(app_config.user_config["test_dir"])
         else:
-            base = os.path.abspath(".tests")
+            base = os.path.abspath(get_tests_folder())
         self.dir = os.path.join(base, f"{self.id:05d}")
         self.session_dir = session.session_dir
         self.build_config = BuildSetup(self.dir, self.config["build"], self.config, app_config)
@@ -70,9 +71,9 @@ class TargetSetup:
         # Create directory.
         os.mkdir(self.dir, mode=0o755)
 
-        tests_index = self.dir.find(".tests")
+        tests_index = self.dir.find(get_tests_folder())
         if tests_index == -1:
-            raise ValueError("Target directory must be inside .tests directory")
+            raise ValueError(f"Target directory must be inside {get_tests_folder()} directory")
         
         tests_dir_structure = self.dir[tests_index + 1 :]
 
@@ -101,10 +102,10 @@ class TargetSetup:
                 yaml.dump(r.config, outfile, default_flow_style=False)
 
             # Creating duplicate runs/config.yaml in session directory
-            tests_index = r.dir.find(".tests")
+            tests_index = r.dir.find(get_tests_folder())
             if tests_index == -1:
-                print("[ERROR]Target run directory must be inside .tests directory")
-                raise ValueError("Target run directory must be inside .tests directory")
+                print(f"[ERROR]Target run directory must be inside {get_tests_folder()} directory")
+                raise ValueError(f"Target run directory must be inside {get_tests_folder()} directory")
 
             tests_dir_structure = r.dir[tests_index + 1 :]
             session_run_dir = os.path.join(self.session_dir, tests_dir_structure)
