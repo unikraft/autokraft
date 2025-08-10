@@ -17,6 +17,7 @@ from target_setup import TargetSetup
 from test_runner import TestRunner
 from tester_config import TesterConfig
 from utils.cleanup import cleanup_folder
+from utils.create_runtime_kernel import create_examples_runtime
 from utils.file_utils import copy_common
 from utils.logger import setup_logger
 from utils.setup_session import SessionSetup
@@ -240,6 +241,8 @@ def main():
             logger.info(f"Generating runtimes...{a.config['runtime']}")
             # Call the new_session.sh script
             cwd = os.getcwd()
+            # TODO: Later need to pass the specific runtime
+            # Currently its only creating base runtime.
             new_session_script = os.path.join(cwd, "scripts", "utils", "new_session.sh")
             if os.path.exists(new_session_script):
                 try:
@@ -258,19 +261,15 @@ def main():
             logger.info("Runtimes already exist, skipping generation.")
         copy_common()
 
-        a.generate_init(t)
+        if not a.is_example():
+            # Generating the initrd.cpio
+            a.generate_init(t)
 
         targets = generate_target_configs(t, a, s, session=session)
 
         for t in targets:
+            logger.info(f"Generating target configuration: {t.id} at {t.dir}")
             t.generate()
-
-        logger.info(f"Generated {len(targets)} target configuration(s) successfully.")
-
-        # Exit early if generate-only flag is set
-        if args.generate_only:
-            logger.info("Generate-only mode enabled. Exiting without running tests.")
-            return
 
         # Parse target numbers if provided
         selected_targets = None
@@ -286,6 +285,23 @@ def main():
             except ValueError as e:
                 logger.error(f"Invalid target number format: {e}")
                 sys.exit(1)
+        else:
+            selected_targets = list(range(len(targets)))
+
+        logger.info(f"Generated {len(targets)} target configuration(s) successfully.")
+
+        # If example, then create the key target runtimes.
+        if a.is_example():
+            logger.info("Generating key target runtimes for example application.")
+            create_examples_runtime(selected_targets, targets)
+
+
+        # Exit early if generate-only flag is set
+        if args.generate_only:
+            logger.info("Generate-only mode enabled. Exiting without running tests.")
+            return 0
+
+        # TODO: Need to call app_init_fs.sh file for examples
 
         # Run tests for selected or all targets
         tests_run = 0
@@ -303,7 +319,7 @@ def main():
         logger.info(f"Completed {tests_run} test(s) successfully.")
 
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")
+        logger.error(f"An error occurred: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
