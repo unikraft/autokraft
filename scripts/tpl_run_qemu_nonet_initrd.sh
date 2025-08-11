@@ -21,6 +21,6 @@ kraft rm --all
     -kernel "$kernel" \
     -nographic \
     -m {memory}M \
-    -append "{name} vfs.fstab=[ \"initrd0:/:extract::ramfs=1:\" ] -- $cmd" \
+    -append "{name} vfs.fstab=[ \"initrd0:/:extract::ramfs={ramfs}:\" ] -- $cmd" \
     -initrd {app_dir}/initrd.cpio \
     -cpu max

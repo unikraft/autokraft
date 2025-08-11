@@ -50,7 +50,14 @@ def create_examples_runtime(selected_targets, targets) -> None:
                 cwd = os.getcwd()
                 source_kernel_path = os.path.join(cwd, runtime_kernel_build_path.split("/build")[0], ".unikraft", "build", "learning_testing_fw_qemu-x86_64")
                 print(f"Source kernel path: {source_kernel_path}")
-                destination_kernel_path = os.path.join("/runtime_kernels", runtime_kernel_name)
+                
+                # Ensure the destination directory exists
+                destination_dir = os.path.join(os.getcwd(), "runtime_kernels")
+                os.makedirs(destination_dir, exist_ok=True)
+                
+                # Define the destination path with the new kernel name
+                destination_kernel_path = os.path.join(destination_dir, runtime_kernel_name)
+                
                 if os.path.exists(source_kernel_path):
                     shutil.move(source_kernel_path, destination_kernel_path)
                     print(f"Kernel moved to {destination_kernel_path}")

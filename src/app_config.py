@@ -281,8 +281,13 @@ class AppConfig(Loggable):
             rootfs = ""
         init_dir = os.getcwd()
         test_app_dir = os.path.join(init_dir, get_app_folder())
-        base = tester_config.config["source"]["base"]
-
+        if "source" in tester_config.config:
+            base = tester_config.config["source"]["base"]
+        elif "base" in tester_config.config:
+            base = tester_config.config["base"]
+        else:
+            print("ERROR: tester.config doesnt have any base path. GOing with default hardcoded[DEV-ONLY].")
+            base = "/home/machine02/maintainer-tools/workdir"
         name = self.config["name"]
 
         if self.has_template():

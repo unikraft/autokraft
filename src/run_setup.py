@@ -55,6 +55,7 @@ class RunSetup:
         kernel = self.build_config.kernel_path
         port_ext = self.app_config.config["public_port"]
         port_int = self.app_config.config["exposed_port"]
+        ramfs = 0 if self.build_config.is_example else 1
         if self.target_config["run"]["vmm"]:
             vmm = self.target_config["run"]["vmm"]["path"]
         hypervisor_option = ""
