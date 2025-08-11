@@ -37,6 +37,6 @@ sudo {vmm} \
     -nographic \
     -m {memory}M \
     -netdev bridge,id=en0,br=virbr0 -device virtio-net-pci,netdev=en0 \
-    -append "{name} netdev.ip=172.44.0.2/24:172.44.0.1::: vfs.fstab=[ \"initrd0:/:extract::ramfs=1:\" ] -- $cmd" \
+    -append "{name} netdev.ip=172.44.0.2/24:172.44.0.1::: vfs.fstab=[ \"initrd0:/:extract::ramfs={ramfs}:\" ] -- $cmd" \
     -initrd {app_dir}/initrd.cpio \
     -cpu max

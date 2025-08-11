@@ -23,6 +23,6 @@ kraft rm --all
     -m {memory}M \
     -device virtio-net-pci,mac=02:b0:b0:1d:be:01,netdev=hostnet0 \
     -netdev user,id=hostnet0,hostfwd=tcp::{port_ext}-:{port_int} \
-    -append "{name} vfs.fstab=[ \"initrd0:/:extract::ramfs=1:\" ] -- $cmd" \
+    -append "{name} vfs.fstab=[ \"initrd0:/:extract::ramfs={ramfs}:\" ] -- $cmd" \
     -initrd {app_dir}/initrd.cpio \
     -cpu max

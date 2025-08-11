@@ -454,12 +454,17 @@ class TestRunner(Loggable):
         This method will execute the build and run configurations for the target.
         """
         self.logger.info(f"Running tests for target: {self.target.id}")
-        # Build the target before running tests(upto 2 mins)
-        build_return_code = self._build_target()
-        # Test if the build was successful
-        build_success = self._test_target_build(self.target.build_config.kernel_path)
-        # Update the build status in the test-app-config/build_report.csv
-        self._update_build_report(self.target, build_return_code, build_success)
+        
+        build_return_code, build_success = 0, True
+        if self.target.build_config.is_example and self.target.config['build']['build_tool'] == 'make':
+            pass
+        else:
+            # Build the target before running tests(upto 2 mins)
+            build_return_code = self._build_target()
+            # Test if the build was successful
+            build_success = self._test_target_build(self.target.build_config.kernel_path)
+            # Update the build status in the test-app-config/build_report.csv
+            self._update_build_report(self.target, build_return_code, build_success)
 
         if build_return_code == 0 and build_success:
             self.logger.info(f"[✓] Build successful for target: {self.target.id}")

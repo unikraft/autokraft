@@ -302,6 +302,9 @@ def main():
             return 0
 
         # TODO: Need to call app_init_fs.sh file for examples
+        if a.is_example():
+            logger.info("Running app_init_fs.sh for example application.")
+            a.generate_init(t)
 
         # Run tests for selected or all targets
         tests_run = 0

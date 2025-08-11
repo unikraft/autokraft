@@ -7,6 +7,7 @@ import os
 import subprocess
 
 from constants import SCRIPT_DIR, get_app_folder
+from utils.create_runtime_kernel import generate_kernel_name
 
 logging.basicConfig(
     level=logging.INFO,  # Set the logging level
@@ -39,10 +40,9 @@ class BuildSetup:
         self.kernel_path = os.path.join(
             os.path.join(os.path.join(self.dir, ".unikraft"), "build"), self.kernel_name
         )
+        self.is_example = app_config.is_example()
         if app_config.is_example():
-            self.kernel_path = os.path.join(
-                os.path.join(os.path.join(self.dir, ".unikraft"), "bin"), "kernel"
-            )
+            self.kernel_path = os.path.join(os.getcwd(), "runtime_kernels", generate_kernel_name(config))
 
     @staticmethod
     def get_build_tools(plat, arch):
