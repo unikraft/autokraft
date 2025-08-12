@@ -7,6 +7,7 @@ import os
 import subprocess
 import time
 from subprocess import PIPE, Popen, run
+import shlex  # Add this import for safely splitting shell commands
 
 import yaml
 
@@ -51,6 +52,25 @@ class TestRunner(Loggable):
 
         return None
 
+    def _terminate_buildkitd(self) -> None:
+        """
+        Terminate the buildkitd process if it is running.
+        """
+        try:
+            self.logger.info("Attempting to terminate buildkitd process...")
+            result = subprocess.run(
+                shlex.split("sudo pkill buildkitd"),
+                capture_output=True,
+                text=True,
+                check=False  # Do not raise an exception on non-zero exit codes
+            )
+            if result.returncode == 0:
+                self.logger.info("[✓] buildkitd process terminated successfully.")
+            else:
+                self.logger.warning("[!] No buildkitd process found to terminate.")
+        except Exception as e:
+            self.logger.error(f"[✗] Error while terminating buildkitd process: {e}")
+
     def _build_target(self) -> int:
         """
         Build the target setup.
@@ -80,6 +100,10 @@ class TestRunner(Loggable):
         )
 
         threshold_timeout = self.test_build_config.get("th_time", 300)
+
+        # Terminate buildkitd process before starting kraft-based build
+        if self.target.config['build']['build_tool'] == 'kraft':
+            self._terminate_buildkitd()
 
         try:
             # Use subprocess.run with timeout for better control
