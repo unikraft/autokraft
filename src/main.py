@@ -238,7 +238,10 @@ def main():
         # here we can generate the runtimes if not created yet
         if a.config["runtime"] is not None:
             # TODO: Check if runtimes already exist l: 
+            # check if the runtime_kernel/a.config['runtime'].split(":")[0] directory is present or not
+
             logger.info(f"Generating runtimes...{a.config['runtime']}")
+
             # Call the new_session.sh script
             cwd = os.getcwd()
             # TODO: Later need to pass the specific runtime
@@ -256,7 +259,7 @@ def main():
                     sys.exit(1)
             else:
                 logger.warning(f"New session script not found: {new_session_script}")
-            # TODO: Also remove this non persistent session before exiting
+            # TODO: Also remove this non persistent session before exiting (from the logs?)
         else:
             logger.info("Runtimes already exist, skipping generation.")
         copy_common()
@@ -293,7 +296,8 @@ def main():
         # If example, then create the key target runtimes.
         if a.is_example():
             logger.info("Generating key target runtimes for example application.")
-            create_examples_runtime(selected_targets, targets)
+            runtime_name = a.config['runtime'].split(":")[0]
+            create_examples_runtime(selected_targets, targets, runtime_name)
 
 
         # Exit early if generate-only flag is set
@@ -301,10 +305,28 @@ def main():
             logger.info("Generate-only mode enabled. Exiting without running tests.")
             return 0
 
-        # TODO: Need to call app_init_fs.sh file for examples
+        # call app_init_fs.sh file for examples
         if a.is_example():
             logger.info("Running app_init_fs.sh for example application.")
             a.generate_init(t)
+
+        # Copy log files from .tests directory to session_dir
+        tests_dir = get_tests_folder()
+        if os.path.exists(tests_dir):
+            for file_name in os.listdir(tests_dir):
+                if file_name.endswith(".log"):
+                    source_path = os.path.join(tests_dir, file_name)
+                    destination_path = os.path.join(session.session_dir, file_name)
+                    try:
+                        logger.info(f"Copying log file {file_name} to session directory.")
+                        os.makedirs(session.session_dir, exist_ok=True)
+                        with open(source_path, "rb") as src, open(destination_path, "wb") as dst:
+                            dst.write(src.read())
+                    except Exception as e:
+                        logger.error(f"Failed to copy log file {file_name}: {e}")
+        else:
+            logger.warning(f"Tests directory not found: {tests_dir}")
+        
 
         # Run tests for selected or all targets
         tests_run = 0

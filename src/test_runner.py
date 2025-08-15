@@ -446,7 +446,7 @@ class TestRunner(Loggable):
         Returns:
             str: The path to the log file if written successfully, otherwise an error message.
         """
-        # TODOs: Update this to the test app directory variable
+        # TODO: Update this to the test app directory variable
         tests_index = directory.find(get_tests_folder())
         if tests_index == -1:
             self.logger.error(f"Directory does not contain '{get_tests_folder()}' segment, cannot write log file.")

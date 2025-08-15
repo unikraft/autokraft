@@ -42,7 +42,7 @@ class BuildSetup:
         )
         self.is_example = app_config.is_example()
         if app_config.is_example():
-            self.kernel_path = os.path.join(os.getcwd(), "runtime_kernels", generate_kernel_name(config))
+            self.kernel_path = os.path.join(os.getcwd(), "runtime_kernels", app_config.config["runtime"].split(":")[0],generate_kernel_name(config))
 
     @staticmethod
     def get_build_tools(plat, arch):
