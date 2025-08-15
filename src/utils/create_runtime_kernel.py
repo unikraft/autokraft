@@ -3,7 +3,7 @@ import yaml
 import shutil
 import subprocess
 
-def create_examples_runtime(selected_targets, targets) -> None:
+def create_examples_runtime(selected_targets, targets, runtime_name) -> None:
     """
     Create the key target runtimes for example applications.
     This function generates the runtime kernel and other necessary files
@@ -17,6 +17,7 @@ def create_examples_runtime(selected_targets, targets) -> None:
     """
     loaded_configs = {}  # Dictionary to store config data: path -> config content
 
+    # Processing all the runtime_kernels configs and build path
     runtime_tests_dir = ".runtime_tests"
     for subdir in os.listdir(runtime_tests_dir):
         subdir_path = os.path.join(runtime_tests_dir, subdir)
@@ -29,14 +30,26 @@ def create_examples_runtime(selected_targets, targets) -> None:
                     kernel_name = generate_kernel_name(config_data)
                     loaded_configs[kernel_name] = runtime_kernel_build_path
 
+
     for target in targets:
         print(f"Processing target {target.id} and searching in {selected_targets}")
         if target.id - 1 in selected_targets:
             example_target_config = target.config['build']
             print(f"Processing target {target.id} with config: {example_target_config}")
             runtime_kernel_name = generate_kernel_name(example_target_config)
+            # Check if given kernel is to be build or not
             if runtime_kernel_name in loaded_configs:
                 runtime_kernel_build_path = loaded_configs[runtime_kernel_name]
+                
+                # Define the destination path early and ensure runtime_name directory exists
+                destination_dir = os.path.join(os.getcwd(), "runtime_kernels", runtime_name)
+                os.makedirs(destination_dir, exist_ok=True)
+                destination_kernel_path = os.path.join(destination_dir, runtime_kernel_name)
+                
+                # Check if this runtime_kernel is already created
+                if os.path.exists(destination_kernel_path):
+                    print(f"Runtime kernel {runtime_kernel_name} already exists at {destination_kernel_path}, skipping generation")
+                    continue
                 
                 # Call the build script
                 build_script_path = runtime_kernel_build_path
@@ -50,13 +63,6 @@ def create_examples_runtime(selected_targets, targets) -> None:
                 cwd = os.getcwd()
                 source_kernel_path = os.path.join(cwd, runtime_kernel_build_path.split("/build")[0], ".unikraft", "build", "learning_testing_fw_qemu-x86_64")
                 print(f"Source kernel path: {source_kernel_path}")
-                
-                # Ensure the destination directory exists
-                destination_dir = os.path.join(os.getcwd(), "runtime_kernels")
-                os.makedirs(destination_dir, exist_ok=True)
-                
-                # Define the destination path with the new kernel name
-                destination_kernel_path = os.path.join(destination_dir, runtime_kernel_name)
                 
                 if os.path.exists(source_kernel_path):
                     shutil.move(source_kernel_path, destination_kernel_path)
