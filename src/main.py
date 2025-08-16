@@ -198,6 +198,13 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def touch_makefile_uk():
+    """Touch Makefile.uk in the current working directory."""
+    makefile_path = os.path.join(os.getcwd(), "Makefile.uk")
+    with open(makefile_path, "a"):
+        os.utime(makefile_path, None)
+
+
 def main():
     """Main entry point for the testing framework."""
 
@@ -225,6 +232,9 @@ def main():
     if not initialize_environment(app_dir, args.tests_dir, args.app_dir_name):
         logger.error("Environment initialization failed. Exiting.")
         sys.exit(1)
+
+    # Touch Makefile.uk before starting testing
+    touch_makefile_uk()
 
     try:
         session = SessionSetup(app_dir, custom_session_name=args.test_session_name)
