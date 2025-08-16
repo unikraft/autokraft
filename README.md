@@ -76,6 +76,36 @@ This project uses a shell script that requires sudo access. To avoid being promp
     Defaults env_keep += "KRAFTKIT_NO_WARN_SUDO KRAFTKIT_BUILDKIT_HOST"
     ```
 
+### Local Docker Registry Setup
+
+The local Docker registry is **required** for testing catalog examples. Set up a simple Docker registry with the following steps:
+
+1. **Create persistent storage directory:**
+   ```console
+   mkdir -p ~/local-registry/data
+   ```
+
+2. **Run the official registry container:**
+   ```console
+   docker run -d --name local-registry \
+     -p 5000:5000 \
+     -v ~/local-registry/data:/var/lib/registry \
+     registry:2
+   ```
+
+3. **Verify the registry is running:**
+   ```console
+   docker ps --filter name=local-registry
+   ```
+
+4. **Test the registry API:**
+   ```console
+   curl http://localhost:5000/v2/_catalog
+   # Should return: {"repositories":[]}
+   ```
+
+The registry will be accessible at `http://localhost:5000` and is used by the framework when testing catalog examples that require container image operations.
+
 ### Running the Framework
 
 To run the framework, use the following command:
@@ -119,7 +149,7 @@ The framework supports the following optional arguments:
   python src/main.py /absolute/path/to/app/dir -v
   ```
 
-**Note**: Target numbers use 1-based indexing (first target is 1, not 0). If no target numbers are specified, all available targets will be tested.
+> **Note:** Target numbers use 1-based indexing (first target is 1, not 0). If no target numbers are specified, all available targets will be tested.
 
 ## 🤝 Contributing
 
