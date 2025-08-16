@@ -71,7 +71,9 @@ def create_examples_runtime(selected_targets, targets, runtime_name) -> None:
                 if build_tool == "make":
                     # Move the kernel to the desired location
                     cwd = os.getcwd()
-                    source_kernel_path = os.path.join(cwd, runtime_kernel_build_path.split("/build")[0], ".unikraft", "build", "learning_testing_fw_qemu-x86_64")
+                    build_dir = os.path.join(cwd, runtime_kernel_build_path.split("/build")[0], ".unikraft", "build")
+                    kernel_filename = find_qemu_x86_64_kernel_file(build_dir)
+                    source_kernel_path = os.path.join(build_dir, kernel_filename)
                     print(f"Source kernel path: {source_kernel_path}")
                     
                     if os.path.exists(source_kernel_path):
@@ -150,3 +152,18 @@ def generate_kernel_name(config_data: dict) -> str:
     # Create the kernel name string
     kernel_name = f"{arch}_{bootloader}_{build_tool}_{compiler_type}_{debug}_{platform}"
     return kernel_name
+
+def find_qemu_x86_64_kernel_file(build_dir: str) -> str:
+    """
+    List all files in build_dir and return the file that contains 'qemu-x86_64' in its name,
+    does not have an extension, and is a file.
+    """
+    for fname in os.listdir(build_dir):
+        fpath = os.path.join(build_dir, fname)
+        if (
+            os.path.isfile(fpath)
+            and "qemu-x86_64" in fname
+            and "." not in fname
+        ):
+            return fname
+    raise FileNotFoundError(f"No qemu-x86_64 kernel file found in {build_dir}")
