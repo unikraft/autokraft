@@ -2,6 +2,7 @@ import os
 import yaml
 import shutil
 import subprocess
+from .process_utils import terminate_buildkitd
 
 def create_examples_runtime(selected_targets, targets, runtime_name) -> None:
     """
@@ -37,6 +38,7 @@ def create_examples_runtime(selected_targets, targets, runtime_name) -> None:
             example_target_config = target.config['build']
             print(f"Processing target {target.id} with config: {example_target_config}")
             runtime_kernel_name = generate_kernel_name(example_target_config)
+            build_tool = target.config['build']['build_tool']
             # Check if given kernel is to be build or not
             if runtime_kernel_name in loaded_configs:
                 runtime_kernel_build_path = loaded_configs[runtime_kernel_name]
@@ -55,20 +57,78 @@ def create_examples_runtime(selected_targets, targets, runtime_name) -> None:
                 build_script_path = runtime_kernel_build_path
                 if os.path.exists(build_script_path):
                     subprocess.run(["bash", build_script_path], check=True)
+                    
+                    # Terminate buildkitd process after build script execution
+                    if build_tool == "kraft":
+                        terminate_buildkitd()
                 else:
                     print(f"Build script not found at {build_script_path}")
                     continue
 
-                # Move the kernel to the desired location
-                cwd = os.getcwd()
-                source_kernel_path = os.path.join(cwd, runtime_kernel_build_path.split("/build")[0], ".unikraft", "build", "learning_testing_fw_qemu-x86_64")
-                print(f"Source kernel path: {source_kernel_path}")
                 
-                if os.path.exists(source_kernel_path):
-                    shutil.move(source_kernel_path, destination_kernel_path)
-                    print(f"Kernel moved to {destination_kernel_path}")
-                else:
-                    print(f"Kernel not found at {source_kernel_path}")
+
+                # Separate both the make and kraft logic differently
+                if build_tool == "make":
+                    # Move the kernel to the desired location
+                    cwd = os.getcwd()
+                    source_kernel_path = os.path.join(cwd, runtime_kernel_build_path.split("/build")[0], ".unikraft", "build", "learning_testing_fw_qemu-x86_64")
+                    print(f"Source kernel path: {source_kernel_path}")
+                    
+                    if os.path.exists(source_kernel_path):
+                        shutil.move(source_kernel_path, destination_kernel_path)
+                        print(f"Kernel moved to {destination_kernel_path}")
+                    else:
+                        print(f"Kernel not found at {source_kernel_path}")
+                elif build_tool == "kraft":
+                    # Kraft specific logic
+                    try:
+                        # Package the image
+                        package_cmd = [
+                            "kraft", "pkg", "--as", "oci", 
+                            "--name", f"localhost:5000/{runtime_name}:local", runtime_kernel_build_path.split("/build")[0]
+                        ]
+                        subprocess.run(package_cmd, check=True)
+                        print(f"Successfully packaged kernel {runtime_kernel_name}")
+                        
+                        # Push it to the repo
+                        push_cmd = [
+                            "kraft", "pkg", "push", 
+                            f"localhost:5000/{runtime_name}:local", runtime_kernel_build_path.split("/build")[0]
+                        ]
+                        subprocess.run(push_cmd, check=True)
+                        print(f"Successfully pushed kernel {runtime_kernel_name} to repository")
+                        
+                        # Pull the image to temporary directory
+                        tmp_kernel_dir = ".tmp-kernel"
+                        pull_cmd = [
+                            "kraft", "pkg", "pull", "-w", tmp_kernel_dir,
+                            f"localhost:5000/{runtime_name}:local"
+                        ]
+                        subprocess.run(pull_cmd, check=True)
+                        print(f"Successfully pulled kernel {runtime_kernel_name}")
+                        
+                        # Move kernel file to destination
+                        cwd = os.getcwd()
+                        source_kernel = os.path.join(cwd, tmp_kernel_dir, "unikraft", "bin", "kernel")
+                        
+                        if os.path.exists(source_kernel):
+                            shutil.move(source_kernel, destination_kernel_path)
+                            print(f"Kernel moved to {destination_kernel_path}")
+                        else:
+                            print(f"Kernel not found at {source_kernel}")
+                        
+                        # Clean up temporary directory
+                        if os.path.exists(tmp_kernel_dir):
+                            shutil.rmtree(tmp_kernel_dir)
+                            print(f"Cleaned up temporary directory {tmp_kernel_dir}")
+                        
+                    except subprocess.CalledProcessError as e:
+                        print(f"Error during kraft packaging/push/pull for {runtime_kernel_name}: {e}")
+                        # Clean up temporary directory in case of error
+                        if os.path.exists(".tmp-kernel"):
+                            shutil.rmtree(".tmp-kernel")
+                        continue
+                
             else:
                 print(f"No configuration found for target {target.id} with kernel name {runtime_kernel_name}")
 
