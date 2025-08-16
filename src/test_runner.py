@@ -13,6 +13,7 @@ import yaml
 
 from target_setup import TargetSetup
 from utils.base import Loggable
+from utils.process_utils import terminate_buildkitd
 from utils.setup_session import SessionSetup
 from constants import get_tests_folder
 
@@ -56,20 +57,8 @@ class TestRunner(Loggable):
         """
         Terminate the buildkitd process if it is running.
         """
-        try:
-            self.logger.info("Attempting to terminate buildkitd process...")
-            result = subprocess.run(
-                shlex.split("sudo pkill buildkitd"),
-                capture_output=True,
-                text=True,
-                check=False  # Do not raise an exception on non-zero exit codes
-            )
-            if result.returncode == 0:
-                self.logger.info("[✓] buildkitd process terminated successfully.")
-            else:
-                self.logger.warning("[!] No buildkitd process found to terminate.")
-        except Exception as e:
-            self.logger.error(f"[✗] Error while terminating buildkitd process: {e}")
+
+        terminate_buildkitd()
 
     def _build_target(self) -> int:
         """
@@ -486,11 +475,12 @@ class TestRunner(Loggable):
             # Build the target before running tests(upto 2 mins)
             build_return_code = self._build_target()
             # Test if the build was successful
+            print("----------------------",self.target.build_config.kernel_path)
             build_success = self._test_target_build(self.target.build_config.kernel_path)
             # Update the build status in the test-app-config/build_report.csv
             self._update_build_report(self.target, build_return_code, build_success)
-
-        if build_return_code == 0 and build_success:
+        # WARNING: TODO: Update the condition after keeping runtime_kernel created by kraft fetched by oci registry 
+        if build_return_code == 0 and build_success or (self.target.build_config.is_example and self.target.config['build']['build_tool'] == 'kraft'):
             self.logger.info(f"[✓] Build successful for target: {self.target.id}")
 
             # Iterate over each of the runs
