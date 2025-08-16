@@ -531,6 +531,11 @@ class TestRunner(Loggable):
                 # Update the run report
                 self._update_run_report(run_config, self.target.id, run_return_code, output_matched)
 
+                # Terminate buildkitd process after each kraft-based run
+                if self.target.config['build']['build_tool'] == 'kraft':
+                    self._terminate_buildkitd()
+                    self.logger.info(f"[✓] Terminated buildkitd process after kraft-based run {idx + 1} for target: {self.target.id}")
+
         else:
             self.logger.info(f"[✗] Build failed for target: {self.target.id}")
 
