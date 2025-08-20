@@ -42,7 +42,7 @@ class BuildSetup:
         )
         self.is_example = app_config.is_example()
         if app_config.is_example():
-            self.kernel_path = os.path.join(os.getcwd(), "runtime_kernels", app_config.config["runtime"].split(":")[0],generate_kernel_name(config))
+            self.kernel_path = os.path.join(os.getcwd(), "runtime_kernels", app_config.config["runtime"].split(":")[0], generate_kernel_name(config))
 
     @staticmethod
     def get_build_tools(plat, arch):
@@ -131,7 +131,7 @@ class BuildSetup:
             stream.write(f"name: {self.app_config.config['name']}\n\n")
 
             if self.app_config.config["runtime"]:
-                stream.write(f"runtime: {self.app_config.config['runtime']}\n\n")
+                stream.write(f"runtime: {self.app_config.config['runtime_localhost']}\n\n")
 
             if self.app_config.config["rootfs"]:
                 if os.path.basename(self.app_config.config["rootfs"]) == "Dockerfile":
@@ -212,9 +212,9 @@ class BuildSetup:
             stream.write("spec: v0.6\n\n")
 
             stream.write(f"name: {self.app_config.config['name']}\n\n")
-
+    
             if self.app_config.config["runtime"]:
-                stream.write(f"runtime: {self.app_config.config['runtime']}\n\n")
+                stream.write(f"runtime: {self.app_config.config['runtime_localhost']}\n\n")
 
             if self.app_config.config["rootfs"]:
                 if os.path.basename(self.app_config.config["rootfs"]) == "Dockerfile":

@@ -121,7 +121,7 @@ class AppConfig(Loggable):
         """
 
         kraft_proc = subprocess.Popen(
-            ["kraft", "pkg", "info", "--log-level", "panic", self.config["runtime"], "-o", "json"],
+            ["kraft", "pkg", "info", "--log-level", "panic", self.config["runtime"].split(":")[0].replace("/", ":"), "-o", "json"],
             stdout=subprocess.PIPE,
         )
         jq_proc = subprocess.Popen(
@@ -173,6 +173,21 @@ class AppConfig(Loggable):
         else:
             self.config["exposed_port"] = data["RunMetadata"]["ExposedPort"]
             self.config["public_port"] = data["RunMetadata"]["PublicPort"]
+
+    def _rename_runtime(self, runtime_name:str) -> str:
+        """Rename runtime to a local version.
+
+        This is used for example applications that use a runtime that is not
+        available in the local environment. The runtime name is modified to
+        indicate it is a local version.
+        """
+        _runtime_ele = runtime_name.split(":")
+
+        if len(_runtime_ele) != 2:
+            raise ValueError(f"Invalid runtime name: {runtime_name}")
+        if _runtime_ele[1] == "latest":
+            return _runtime_ele[0] + ":local"
+        return _runtime_ele[0] + "/" + _runtime_ele[1] + ":local"
 
     def _parse_app_config(self, app_config_file):
         """Parse Kraftfile.
@@ -229,7 +244,8 @@ class AppConfig(Loggable):
         else:
             self.config["runtime"] = data["runtime"]
             if self.is_example():
-                self.config["runtime"] = self.config["runtime"].split(":")[0] + ":local"
+                self.config["runtime"] = self._rename_runtime(self.config["runtime"])
+                self.config["runtime_localhost"] = "localhost/5000/" + self.config["runtime"] 
 
         if not "targets" in data.keys():
             self.config["targets"] = None

@@ -256,11 +256,22 @@ def main():
             cwd = os.getcwd()
             # TODO: Later need to pass the specific runtime
             # Currently its only creating base runtime.
+            runtime_name = a.config['runtime'].split(":")[0]
+            
+            # Extract catalog base path from app_dir
+            app_dir_parts = app_dir.split('catalog')
+            if len(app_dir_parts) > 1:
+                catalog_base_path = app_dir_parts[0] + 'catalog/library'
+                catalog_runtime_path = os.path.join(catalog_base_path, runtime_name)
+            else:
+                logger.error(f"Could not extract catalog path from app_dir: {app_dir}")
+                sys.exit(1)
+            logger.info(f"Catalog runtime path: {catalog_runtime_path}")
             new_session_script = os.path.join(cwd, "scripts", "utils", "new_session.sh")
             if os.path.exists(new_session_script):
                 try:
                     result = subprocess.run(
-                        [new_session_script], check=True, text=True, capture_output=True
+                        [new_session_script, catalog_runtime_path], check=True, text=True, capture_output=True
                     )
                     logger.debug(f"New session script output: {result.stdout}")
                 except subprocess.CalledProcessError as e:
