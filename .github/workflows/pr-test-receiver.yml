@@ -1,0 +1,35 @@
+name: Testing framework
+
+on:
+  repository_dispatch:
+    types: [uk_pr_test]
+
+jobs:
+  pr-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump client_payload
+        run: |
+          echo "client_payload: ${{ toJson(github.event.client_payload) }}"
+      - name: Fetch PR via refs/pull and checkout
+        env:
+            PR_REPO: ${{ github.event.client_payload.pr_repo_name }}   # base repo (owner/repo)
+            PR_NUM: ${{ github.event.client_payload.pr_number }}
+            TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN || '' }}
+        run: |
+            set -e
+            # Use token in remote URL only if set (keeps public clones unauthenticated)
+            if [ -n "$TOKEN" ]; then
+            remote="https://x-access-token:${TOKEN}@github.com/${PR_REPO}.git"
+            else
+            remote="https://github.com/${PR_REPO}.git"
+            fi
+
+            echo "Fetching refs/pull/${PR_NUM}/head from ${PR_REPO}"
+            # Start a fresh repo in workspace
+            git init .
+            git remote add origin "$remote"
+            # Fetch the PR head into a local branch 'pr-branch'
+            git fetch --no-tags --depth=1 origin "refs/pull/${PR_NUM}/head:pr-branch"
+            git checkout pr-branch
+            echo "Now at commit: $(git rev-parse HEAD)"
