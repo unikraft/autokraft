@@ -162,7 +162,7 @@ def find_qemu_x86_64_kernel_file(build_dir: str) -> str:
         fpath = os.path.join(build_dir, fname)
         if (
             os.path.isfile(fpath)
-            and "qemu-x86_64" in fname
+            and "x86_64" in fname
             and "." not in fname
         ):
             return fname
