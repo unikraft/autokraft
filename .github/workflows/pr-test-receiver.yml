@@ -11,25 +11,206 @@ jobs:
       - name: Dump client_payload
         run: |
           echo "client_payload: ${{ toJson(github.event.client_payload) }}"
+
+      - name: Check sudo access
+        run: |
+          if sudo -n true 2>/dev/null; then
+            echo "sudo is passwordless"
+          else
+            echo "sudo requires password"
+          fi
+
       - name: Fetch PR via refs/pull and checkout
         env:
-            PR_REPO: ${{ github.event.client_payload.pr_repo_name }}   # base repo (owner/repo)
+            PR_REPO: ${{ github.event.client_payload.pr_repo_name }} 
             PR_NUM: ${{ github.event.client_payload.pr_number }}
             TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN || '' }}
         run: |
-            set -e
-            # Use token in remote URL only if set (keeps public clones unauthenticated)
+            # Exit on error, treat unset variables as errors, and fail pipelines on first failed command
+            set -euo pipefail
+
+            # Choose an authenticated remote only when a token is provided
             if [ -n "$TOKEN" ]; then
-            remote="https://x-access-token:${TOKEN}@github.com/${PR_REPO}.git"
+              remote="https://x-access-token:${TOKEN}@github.com/${PR_REPO}.git"
             else
-            remote="https://github.com/${PR_REPO}.git"
+              remote="https://github.com/${PR_REPO}.git"
             fi
 
-            echo "Fetching refs/pull/${PR_NUM}/head from ${PR_REPO}"
-            # Start a fresh repo in workspace
+            echo "Fetching refs/pull/${PR_NUM}/head from ${PR_REPO} into unikraft/"
+            # create target dir and fetch the PR head into it (keeps workspace root clean)
+            mkdir -p unikraft
+            cd unikraft
             git init .
             git remote add origin "$remote"
-            # Fetch the PR head into a local branch 'pr-branch'
+            # fetch the PR head ref into a local branch 'pr-branch' (shallow)
             git fetch --no-tags --depth=1 origin "refs/pull/${PR_NUM}/head:pr-branch"
             git checkout pr-branch
             echo "Now at commit: $(git rev-parse HEAD)"
+            # return to workspace root so following steps run from repo root
+            cd - >/dev/null
+
+      - name: List workspace after PR checkout
+        run: |
+          echo "Workspace root: $(pwd)"
+          ls -la
+          echo "\nContents of unikraft/ (if present):"
+          ls -la unikraft || true
+          echo "\nGit branch and latest commit in unikraft/ (if present):"
+          if [ -d unikraft/.git ]; then
+            git -C unikraft rev-parse --abbrev-ref HEAD || true
+            git -C unikraft rev-parse HEAD || true
+          else
+            echo "unikraft/.git not found"
+          fi
+
+      - name: Checkout receiver repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          # place it in a subdirectory
+          path: testing-framework-uk-build
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies in venv
+        run: |
+          set -e
+          cd testing-framework-uk-build/
+          python3 -m venv testing-fw-venv
+          source testing-fw-venv/bin/activate
+          python3 -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+
+      - name: Set up Docker Build
+        uses: docker/setup-buildx-action@v3
+
+      - name: Enable Docker BuildKit
+        run: echo "DOCKER_BUILDKIT=1" >> $GITHUB_ENV
+
+      - name: Install base dependencies
+        run: |
+          sudo apt -y update
+          sudo apt install -y --no-install-recommends \
+            build-essential \
+            sudo \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            libncurses-dev \
+            libyaml-dev \
+            flex \
+            bison \
+            git \
+            wget \
+            curl \
+            uuid-runtime \
+            qemu-kvm \
+            qemu-system-x86 \
+            qemu-system-arm \
+            sgabios \
+            libarchive-tools \
+            clang \
+            xen-utils \
+            redis-tools
+      
+      - name: Setup QEMU networking
+        run: |
+          test -d /etc/qemu || sudo mkdir -p /etc/qemu
+          echo "allow all" | sudo tee /etc/qemu/bridge.conf
+
+      - name: Install Firecracker
+        run: |
+          release_url="https://github.com/firecracker-microvm/firecracker/releases"
+          latest=v1.7.0
+          curl -L ${release_url}/download/${latest}/firecracker-${latest}-$(uname -m).tgz | tar -xz
+          sudo cp release-${latest}-$(uname -m)/firecracker-${latest}-$(uname -m) /usr/local/bin/firecracker-${latest}-$(uname -m)
+          sudo ln -sfn /usr/local/bin/firecracker-${latest}-$(uname -m) /usr/local/bin/firecracker-$(uname -m)
+          sudo usermod -a -G kvm $USER
+          
+      - name: Prepare maintainer-tools and populate workdir
+        env:
+          TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN || '' }}
+          WORKDIR: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          echo "Workspace: $WORKDIR"
+          
+          # 1) Clone maintainer-tools repo (use token if provided)
+          if [ -n "${TOKEN:-}" ]; then
+            MT_REMOTE="https://x-access-token:${TOKEN}@github.com/unikraft-upb/maintainer-tools.git"
+          else
+            MT_REMOTE="https://github.com/unikraft-upb/maintainer-tools.git"
+          fi
+
+          echo "Cloning maintainer-tools from $MT_REMOTE ..."
+          # ensure we start from a clean place
+          rm -rf maintainer-tools || true
+          git clone --depth=1 "$MT_REMOTE" maintainer-tools
+
+          # 2) Run clone-all.sh in workdir/apps
+          APPS_DIR="maintainer-tools/workdir/apps"
+          if [ ! -d "$APPS_DIR" ]; then
+            echo "ERROR: expected $APPS_DIR to exist after clone; listing maintainer-tools:"
+            ls -la maintainer-tools || true
+            exit 1
+          fi
+
+          echo "Running clone-all.sh in $APPS_DIR ..."
+          cd "$APPS_DIR"
+          chmod +x ./clone-all.sh || true
+          ./clone-all.sh
+
+          # 3) Create symlink app-elfloader -> elfloader (if elfloader exists)
+          if [ -d "elfloader" ]; then
+            ln -snf elfloader app-elfloader
+            echo "Created/updated symlink: app-elfloader -> elfloader"
+          else
+            echo "WARNING: elfloader directory not found in $APPS_DIR — listing contents:"
+            ls -la
+            # not fatal; continue so user can inspect logs
+          fi
+
+          # 4) Run fill-workdir.sh from maintainer-tools/workdir
+          echo "Running fill-workdir.sh ..."
+          cd ../   # now in maintainer-tools/workdir
+          if [ -f ./fill-workdir.sh ]; then
+            chmod +x ./fill-workdir.sh || true
+            ./fill-workdir.sh
+          else
+            echo "ERROR: fill-workdir.sh not found in $(pwd)"
+            ls -la
+            exit 1
+          fi
+
+          # 5) Return to repo workspace root
+          cd "$WORKDIR"
+  
+      - name: Replace maintainer-tools workdir/unikraft using tar
+        run: |
+          set -euo pipefail
+          WORKDIR="${GITHUB_WORKSPACE:-$(pwd)}"
+          SRC="$WORKDIR/unikraft"
+          TGT="$WORKDIR/maintainer-tools/workdir/unikraft"
+
+          echo "Source: $SRC"
+          echo "Target: $TGT"
+
+          if [ ! -d "$SRC" ]; then
+            echo "ERROR: source directory $SRC does not exist"
+            exit 1
+          fi
+
+          # remove old target, recreate
+          rm -rf "$TGT"
+          mkdir -p "$TGT"
+
+          # copy contents, excluding .git (preserves symlinks, timestamps, perms)
+          tar --exclude='.git' -C "$SRC" -cf - . | tar -C "$TGT" -xpf -
+
+          echo "Done. Target listing:"
+          ls -la "$TGT"
+ 
