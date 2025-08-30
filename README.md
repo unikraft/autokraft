@@ -1,11 +1,6 @@
-<<<<<<< HEAD
 # autokraft
-Automate Unikraft testing
 
-#  Testing Framework for Unikraft Builds
-=======
-# Testing Framework for Unikraft Builds
->>>>>>> 57ae998 (README: Improve formatting)
+## Automate Unikraft testing
 
 ![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
@@ -23,6 +18,32 @@ This project aims to:
 - Support a wide range of configuration options: VMMs, hypervisors, architectures, and boot protocols.
 - Integrate tightly with the [`catalog`](https://github.com/unikraft/catalog) and [`catalog-core`](https://github.com/unikraft/catalog-core) repositories.
 - Run as part of Unikraft's CI/CD workflows to validate pull requests automatically.
+
+## Requirements
+
+For running the framework, you need packages required to build and run Unikraft applications, and the frameworks own dependencies.
+Follow the steps:
+
+1. Install base packages, QEMU, Docker Firecracker, Clang as instructed in the [`Requirements` section in the `catalog-core` repository](https://github.com/unikraft/catalog-core#requirements).
+   Be sure to follow the [instructions to configure QEMU bridged networking](https://github.com/unikraft/catalog-core#qemu):
+
+   ```console
+   test -d /etc/qemu || sudo mkdir /etc/qemu
+   echo "allow all" | sudo tee /etc/qemu/bridge.conf
+   ```
+
+1. Install [KraftKit](https://github.com/unikraft/kraftkit):
+
+   ```console
+   curl --proto '=https' --tlsv1.2 -sSf https://get.kraftkit.sh | sh
+   ```
+
+1. Install Python3 and Python3 package management tools: `python3`, `python3-pip`, `python3-venv`.
+   On Ubuntu/Debian or other `apt`-based distributions, use the following command:
+
+   ```console
+   sudo apt install python3 python-is-python3 python3-pip python3-venv
+   ```
 
 ## Set Up and Run the Testing Framework
 
