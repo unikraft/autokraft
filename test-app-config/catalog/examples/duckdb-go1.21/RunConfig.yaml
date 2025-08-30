@@ -6,7 +6,7 @@ RunMetadata:
 
 TestingType: curl
 ListOfCommands:
-  - curl localhost:8080
+  - "curl localhost:8080"
 
 ExpectedOutput:
-  - "Bye, World!"
+  - "id: %d, name: %s 42 John"

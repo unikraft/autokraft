@@ -1,0 +1,14 @@
+RunMetadata:
+  Memory: 512
+  Networking: true
+  ExposedPort: 6379
+  PublicPort: 6379
+
+TestingType: list-of-commands
+ListOfCommands:
+  - redis-cli -h localhost -p 6379 set a 1
+  - redis-cli -h localhost -p 6379 get a
+
+ExpectedOutput:
+  - "OK"
+  - "1"
