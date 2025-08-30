@@ -49,10 +49,28 @@ jobs:
             # return to workspace root so following steps run from repo root
             cd - >/dev/null
 
-      - name: List workspace after PR checkout
+      - name: Clone Unikraft catalog repository (sibling directory)
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Workspace root: $(pwd)"
+          set -euo pipefail
+          if [ -n "$TOKEN" ]; then
+            remote="https://x-access-token:${TOKEN}@github.com/unikraft/catalog.git"
+          else
+            remote="https://github.com/unikraft/catalog.git"
+          fi
+
+          echo "Cloning catalog from $remote into ./catalog"
+          rm -rf catalog || true
+          git clone --depth=1 "$remote" catalog
+          echo "catalog HEAD: $(git -C catalog rev-parse HEAD)"
+
+      - name: List workspace
+        run: |
+          echo "Workspace root after catalog clone: $(pwd)"
           ls -la
+          echo "\nContents of catalog/:"
+          ls -la catalog || true
           echo "\nContents of unikraft/ (if present):"
           ls -la unikraft || true
           echo "\nGit branch and latest commit in unikraft/ (if present):"
@@ -116,7 +134,36 @@ jobs:
             clang \
             xen-utils \
             redis-tools
-      
+          
+      - name: Install KraftKit (APT)
+        run: |
+          set -euo pipefail
+          # Prereqs
+          sudo apt-get update
+          sudo apt-get install -y \
+            ca-certificates \
+            curl \
+            gnupg \
+            lsb-release
+
+          # Add Unikraft's GPG key
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://deb.pkg.kraftkit.sh/gpg.key | \
+            sudo gpg --dearmor -o /etc/apt/keyrings/unikraft.gpg
+
+          # Add APT repo
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/unikraft.gpg] https://deb.pkg.kraftkit.sh /" | \
+            sudo tee /etc/apt/sources.list.d/unikraft.list > /dev/null
+
+          # Install kraftkit
+          sudo apt-get update
+          sudo apt-get install -y kraftkit
+
+      - name: Verify KraftKit installation
+        run: |
+          set -e
+          kraft version
+            
       - name: Setup QEMU networking
         run: |
           test -d /etc/qemu || sudo mkdir -p /etc/qemu
