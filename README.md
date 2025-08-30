@@ -52,12 +52,18 @@ Follow the steps below to set up the testing framework:
 
 1. Configure the framework:
 
-   Open the configuration file: `src/config.yaml`.
-   Locate the following section & Update the base path to point to the absolute path of your local Unikraft repository setup.
+   Create the configuration file `src/config.yaml`, as a copy of the the `src/config.yaml.template` file:
+
+   ```console
+   cp src/config.yaml.template src/config.yaml
+   ```
+
+   Edit the `src/config.yaml` file and update the `base` path to point to the absolute path of your local Unikraft working directory.
+   A sample configuration would be:
 
    ```yaml
    source:
-     base: /absolute/path/to/your/unikraft/root
+     base: /home/monkey/razvand/orgs/unikraft/maintainer-tools/workdir
    ```
 
    > **Note:**
