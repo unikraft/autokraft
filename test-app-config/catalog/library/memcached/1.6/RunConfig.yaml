@@ -1,0 +1,22 @@
+RunMetadata:
+  Memory: 256
+  Networking: true
+  ExposedPort: 11211
+  PublicPort: 11211
+
+TestingType: list-of-commands
+ListOfCommands:
+  - "telnet localhost 11211"
+  - "stats"
+
+ExpectedOutput:
+  - "STAT pid"
+  - "STAT uptime"
+  - "STAT time"
+  - "STAT version"
+  - "STAT libevent"
+  - "STAT pointer_size"
+  - "STAT"
+  - "Trying 127.0.0.1..."
+  - "Connected to localhost."
+  - "Escape character is '^]'"

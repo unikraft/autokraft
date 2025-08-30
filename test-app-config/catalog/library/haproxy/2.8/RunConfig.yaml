@@ -1,0 +1,14 @@
+RunMetadata:
+  Memory: 256
+  Networking: true
+  ExposedPort: 8404
+  PublicPort: 8404
+
+TestingType: curl
+ListOfCommands:
+  - "curl localhost:8404/stats"
+
+ExpectedOutput:
+  - "HTTP/1.1 200 OK"
+  - "haproxy"
+  - "stats"

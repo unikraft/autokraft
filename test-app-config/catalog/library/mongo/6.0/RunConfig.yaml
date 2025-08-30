@@ -1,0 +1,12 @@
+Memory: 1024
+Networking: true
+ExposedPort: 27017
+PublicPort: 27017
+TestingType: list-of-commands
+ListOfCommands:
+  - mongo
+ExpectedOutput:
+  - "MongoDB shell version"
+  - "connecting to: mongodb://127.0.0.1:27017/"
+  - "Implicit session: session {"
+  - "MongoDB server version:"

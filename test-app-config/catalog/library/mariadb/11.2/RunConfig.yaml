@@ -1,0 +1,17 @@
+RunMetadata:
+  Memory: 1024
+  Networking: true
+  ExposedPort: 3306
+  PublicPort: 3306
+
+TestingType: list-of-commands
+ListOfCommands:
+  - "mysql -u root -punikraft -h 127.0.0.1"
+  - "show databases;"
+
+ExpectedOutput:
+  - "Welcome to the MariaDB monitor"
+  - "information_schema"
+  - "mysql"
+  - "performance_schema"
+  - "sys"
