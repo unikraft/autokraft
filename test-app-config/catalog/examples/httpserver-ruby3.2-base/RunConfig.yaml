@@ -1,5 +1,5 @@
 RunMetadata:
-  Memory: 512
+  Memory: 256
   Networking: true
   ExposedPort: 8080
   PublicPort: 8080

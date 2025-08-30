@@ -1,12 +1,12 @@
 RunMetadata:
   Memory: 512
   Networking: true
-  ExposedPort: 8080
-  PublicPort: 8080
+  ExposedPort: 3000
+  PublicPort: 3000
 
 TestingType: curl
 ListOfCommands:
-  - curl localhost:8080
+  - curl localhost:3000
 
 ExpectedOutput:
-  - "Bye, World!"
+  - Bye, World!
