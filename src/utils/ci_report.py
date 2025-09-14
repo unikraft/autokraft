@@ -70,7 +70,6 @@ class CIReport:
                 relative_app_path = relative_app_path[3:]
         except Exception:
             relative_app_path = app_path
-        
         app_sessions_root = os.path.join(self.sessions_path, relative_app_path)
 
         if not os.path.isdir(app_sessions_root):

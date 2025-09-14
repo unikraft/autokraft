@@ -12,6 +12,63 @@ jobs:
         run: |
           echo "client_payload: ${{ toJson(github.event.client_payload) }}"
 
+      - name: Record start time
+        id: start_time
+        run: echo "start_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Parse target repo owner and name
+        id: parse_repo
+        run: |
+          set -euo pipefail
+          REPO="${{ github.event.client_payload.pr_repo_name }}"
+          OWNER="${REPO%%/*}"
+          NAME="${REPO#*/}"
+          echo "owner=$OWNER" >> $GITHUB_OUTPUT
+          echo "repo=$NAME" >> $GITHUB_OUTPUT
+          echo "Parsed owner=$OWNER repo=$NAME"
+
+      - name: Generate GitHub App Token
+        if: github.event_name == 'repository_dispatch'
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CI_REPORT_APP_ID }}
+          private-key: ${{ secrets.CI_REPORT_APP_PRIVATE_KEY }}
+          owner: ${{ steps.parse_repo.outputs.owner }}
+          repositories: ${{ steps.parse_repo.outputs.repo }}
+
+      - name: Retrieve PR details (head SHA)
+        id: get_pr
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}
+        with:
+          route: GET /repos/{owner}/{repo}/pulls/{pull_number}
+          owner: ${{ steps.parse_repo.outputs.owner }}
+          repo: ${{ steps.parse_repo.outputs.repo }}
+          pull_number: ${{ github.event.client_payload.pr_number }}
+        continue-on-error: true
+
+      - name: Create Initial Check Run
+        if: github.event_name == 'repository_dispatch' && steps.generate_token.outputs.token != ''
+        uses: octokit/request-action@v2.x
+        id: create_check
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+        with:
+          route: POST /repos/{owner}/{repo}/check-runs
+          owner: ${{ steps.parse_repo.outputs.owner }}
+          repo: ${{ steps.parse_repo.outputs.repo }}
+          name: "Autokraft PR Testing Framework"
+          head_sha: ${{ fromJson(steps.get_pr.outputs.data || '{}').head.sha || github.event.client_payload.pr_sha || github.sha }}
+          status: 'in_progress'
+          started_at: ${{ steps.start_time.outputs.start_time }}
+          output: |
+            {
+              "title": "Tests are running...",
+              "summary": "Autokraft PR testing framework triggered. Workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+
       - name: Check sudo access
         run: |
           if sudo -n true 2>/dev/null; then
@@ -22,13 +79,14 @@ jobs:
 
       - name: Fetch PR via refs/pull and checkout
         env:
-            PR_REPO: ${{ github.event.client_payload.pr_repo_name }} 
+            PR_REPO: ${{ github.event.client_payload.pr_repo_name }}
             PR_NUM: ${{ github.event.client_payload.pr_number }}
             TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN || '' }}
         run: |
             # Exit on error, treat unset variables as errors, and fail pipelines on first failed command
             set -euo pipefail
-
+            pwd
+            echo "Workspace: $GITHUB_WORKSPACE"
             # Choose an authenticated remote only when a token is provided
             if [ -n "$TOKEN" ]; then
               remote="https://x-access-token:${TOKEN}@github.com/${PR_REPO}.git"
@@ -38,13 +96,24 @@ jobs:
 
             echo "Fetching refs/pull/${PR_NUM}/head from ${PR_REPO} into unikraft/"
             # create target dir and fetch the PR head into it (keeps workspace root clean)
+            cd ..
             mkdir -p unikraft
             cd unikraft
             git init .
             git remote add origin "$remote"
             # fetch the PR head ref into a local branch 'pr-branch' (shallow)
-            git fetch --no-tags --depth=1 origin "refs/pull/${PR_NUM}/head:pr-branch"
-            git checkout pr-branch
+            if git fetch --no-tags --depth=1 origin "refs/pull/${PR_NUM}/head:pr-branch"; then
+              echo "Fetched via refs/pull/${PR_NUM}/head"
+              git checkout pr-branch
+            else
+              echo "Fallback: attempting fetch via provided pr_head_ref"
+              HEAD_REF="${{ github.event.client_payload.pr_head_ref }}"
+              # pr_head_ref may include owner/ prefix; strip if present
+              STRIPPED_REF="${HEAD_REF##*/}"
+              echo "Using branch name: $STRIPPED_REF"
+              git fetch --no-tags --depth=1 origin "$STRIPPED_REF:pr-branch"
+              git checkout pr-branch
+            fi
             echo "Now at commit: $(git rev-parse HEAD)"
             # return to workspace root so following steps run from repo root
             cd - >/dev/null
@@ -53,40 +122,14 @@ jobs:
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          if [ -n "$TOKEN" ]; then
-            remote="https://x-access-token:${TOKEN}@github.com/unikraft/catalog.git"
-          else
-            remote="https://github.com/unikraft/catalog.git"
-          fi
-
-          echo "Cloning catalog from $remote into ./catalog"
-          rm -rf catalog || true
-          git clone --depth=1 "$remote" catalog
+          cd ..
+          git clone --depth=1 https://github.com/unikraft/catalog.git catalog
           echo "catalog HEAD: $(git -C catalog rev-parse HEAD)"
 
-      - name: List workspace
-        run: |
-          echo "Workspace root after catalog clone: $(pwd)"
-          ls -la
-          echo "\nContents of catalog/:"
-          ls -la catalog || true
-          echo "\nContents of unikraft/ (if present):"
-          ls -la unikraft || true
-          echo "\nGit branch and latest commit in unikraft/ (if present):"
-          if [ -d unikraft/.git ]; then
-            git -C unikraft rev-parse --abbrev-ref HEAD || true
-            git -C unikraft rev-parse HEAD || true
-          else
-            echo "unikraft/.git not found"
-          fi
-
-      - name: Checkout receiver repository
+      - name: Checkout Autokraft repository
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}
-          # place it in a subdirectory
-          path: testing-framework-uk-build
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -98,7 +141,6 @@ jobs:
       - name: Install Python dependencies in venv
         run: |
           set -e
-          cd testing-framework-uk-build/
           python3 -m venv testing-fw-venv
           source testing-fw-venv/bin/activate
           python3 -m pip install --upgrade pip setuptools wheel
@@ -134,7 +176,7 @@ jobs:
             clang \
             xen-utils \
             redis-tools
-          
+
       - name: Install KraftKit (APT)
         run: |
           set -euo pipefail
@@ -163,7 +205,7 @@ jobs:
         run: |
           set -e
           kraft version
-            
+
       - name: Setup QEMU networking
         run: |
           test -d /etc/qemu || sudo mkdir -p /etc/qemu
@@ -177,7 +219,7 @@ jobs:
           sudo cp release-${latest}-$(uname -m)/firecracker-${latest}-$(uname -m) /usr/local/bin/firecracker-${latest}-$(uname -m)
           sudo ln -sfn /usr/local/bin/firecracker-${latest}-$(uname -m) /usr/local/bin/firecracker-$(uname -m)
           sudo usermod -a -G kvm $USER
-          
+
       - name: Prepare maintainer-tools and populate workdir
         env:
           TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN || '' }}
@@ -185,7 +227,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "Workspace: $WORKDIR"
-          
+
           # 1) Clone maintainer-tools repo (use token if provided)
           if [ -n "${TOKEN:-}" ]; then
             MT_REMOTE="https://x-access-token:${TOKEN}@github.com/unikraft-upb/maintainer-tools.git"
@@ -235,12 +277,13 @@ jobs:
 
           # 5) Return to repo workspace root
           cd "$WORKDIR"
-  
+
       - name: Replace maintainer-tools workdir/unikraft using tar
         run: |
           set -euo pipefail
+          pwd
           WORKDIR="${GITHUB_WORKSPACE:-$(pwd)}"
-          SRC="$WORKDIR/unikraft"
+          SRC="$WORKDIR/../unikraft"
           TGT="$WORKDIR/maintainer-tools/workdir/unikraft"
 
           echo "Source: $SRC"
@@ -260,4 +303,73 @@ jobs:
 
           echo "Done. Target listing:"
           ls -la "$TGT"
- 
+
+      - name: Run overall_test.py
+        run: |
+          source testing-fw-venv/bin/activate
+          cat > src/config.yaml <<EOF
+          source:
+            base: $(pwd)/maintainer-tools/workdir
+          EOF
+          ${{ vars.TEST_COMMAND }} --catalog-path /home/runner/work/autokraft/catalog/library
+
+      - name: Upload CI report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-report
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 30
+          path: |
+            .sessions/
+
+      - name: Show ci_report.json (if present)
+        if: always()
+        run: |
+          REPORT=/home/runner/work/autokraft/autokraft/.sessions/ci_report.json
+          if [ -f "$REPORT" ]; then
+            echo "---- ci_report.json start ----"
+            cat "$REPORT"
+            echo "---- ci_report.json end ----"
+          else
+            echo "ci_report.json not found at $REPORT"
+          fi
+
+      - name: Record completion time
+        id: completion_time
+        if: always()
+        run: echo "completion_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Derive result (simple)
+        id: run-tests
+        if: always()
+        run: |
+          # Placeholder: decide result based on overall job status
+          JS="${{ job.status }}"
+          case "$JS" in
+            success) echo 'result=success' >> $GITHUB_OUTPUT; echo 'result_upper=SUCCESS' >> $GITHUB_OUTPUT;;
+            cancelled) echo 'result=cancelled' >> $GITHUB_OUTPUT; echo 'result_upper=CANCELED' >> $GITHUB_OUTPUT;;
+            *) echo 'result=failure' >> $GITHUB_OUTPUT; echo 'result_upper=FAILURE' >> $GITHUB_OUTPUT;;
+          esac
+
+      - name: Update Final Check Run
+        if: always() && steps.create_check.outputs.data != ''
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+        with:
+          route: PATCH /repos/{owner}/{repo}/check-runs/${{ fromJson(steps.create_check.outputs.data).id }}
+          owner: ${{ steps.parse_repo.outputs.owner }}
+          repo: ${{ steps.parse_repo.outputs.repo }}
+          name: "Autokraft: PR Testing Framework"
+          status: 'completed'
+          conclusion: ${{ steps.run-tests.outputs.result || job.status }}
+          started_at: ${{ steps.start_time.outputs.start_time }}
+          completed_at: ${{ steps.completion_time.outputs.completion_time }}
+          output: |
+            {
+              "title": "Autokraft: PR Testing Framework: ${{ steps.run-tests.outputs.result_upper }}",
+              "summary": "Full workflow logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+
