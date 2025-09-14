@@ -402,8 +402,6 @@ class TestRunner(Loggable):
 
         if run_return_code == 0 and output_matched:
             status = "pass"
-        elif (run_return_code == 0 and not output_matched) or (run_return_code != 0 and output_matched):
-            status = "partial-pass"
 
         flat_dict = {
             "build_no": build_no,
