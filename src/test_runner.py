@@ -227,6 +227,9 @@ class TestRunner(Loggable):
             test_command = test_command.replace("https://", "")
             test_command = test_command.replace("http://", "")
             test_command = test_command.replace("localhost", "172.44.0.2")
+            exposed_port = self.test_run_config.get("ExposedPort", 80)
+            public_port = self.test_run_config.get("PublicPort", 8080)
+            test_command = test_command.replace(str(public_port), str(exposed_port))
         
         return test_command
 
