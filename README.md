@@ -54,8 +54,8 @@ Follow the steps below to set up the testing framework:
 1. Clone the repository:
 
    ```console
-   git clone https://github.com/shank250/testing-framework-uk-build.git
-   cd testing-framework-uk-build
+   git clone https://github.com/unikraft/autokraft.git
+   cd autokraft
    ```
 
 1. Create a Python virtual environment:
