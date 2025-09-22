@@ -13,6 +13,8 @@ sudo pkill -f qemu-system
 sudo pkill -f firecracker
 kraft stop --all
 kraft rm --all
+sudo KRAFTKIT_NO_WARN_SUDO=1 kraft stop --all
+sudo KRAFTKIT_NO_WARN_SUDO=1 kraft rm --all
 }} > /dev/null 2>&1
 
 {vmm} \

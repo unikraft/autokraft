@@ -9,7 +9,7 @@ if test -z "$init_rootfs"; then
 fi
 
 # Use $testing_rootfs as the rootfs for testing.
-rm -fr "$testing_rootfs"
+sudo rm -fr "$testing_rootfs"
 mkdir "$testing_rootfs"
 
 # If rootfs is Dockerfile, create directory from Dockerfile.

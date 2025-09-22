@@ -1,5 +1,5 @@
 #!/bin/sh
 
-rm -fr {target_dir}/.unikraft/build
-rm -f {target_dir}/.config.*
+sudo rm -fr {target_dir}/.unikraft/build
+sudo rm -f {target_dir}/.config.*
 kraft build --log-level debug --log-type basic --no-cache --no-update --plat {plat} --arch {arch} {target_dir}
