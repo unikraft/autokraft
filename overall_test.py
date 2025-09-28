@@ -18,6 +18,12 @@ import os
 import subprocess
 import sys
 from datetime import datetime
+# Ensure we can import utilities from src when executing this script directly
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_SRC_DIR = os.path.join(_SCRIPT_DIR, "src")
+if _SRC_DIR not in sys.path:
+    sys.path.insert(0, _SRC_DIR)
+from utils.ci_report import CIReport  # type: ignore
 
 
 def find_catalog_library(base_dir: str) -> str:
@@ -177,16 +183,30 @@ def main():
     logger.info(f"Starting processing {len(apps)} app(s). Log: {overall_log}")
 
     failures = []
+    # Initialize CI report collector
+    ci_report = CIReport()
     for name, path in apps:
         if name == 'grafana/10.2':
             continue
         logger.info(f"Processing app: {name} -> {path}")
         ok = run_for_app(main_py, path, args, logger)
+        # Update CI report with raw return status
+        # (We pass the app directory path; could adjust to logical name.)
+        ci_report.update_report(path, 0 if ok else 1)
+        ci_report.generate_report()
+        logger.info(f"CI report updated after processing {name}")
         if not ok:
             logger.error(f"App failed: {name}")
             failures.append(name)
             if args.stop_on_fail:
                 break
+
+    # Always generate report at the end
+    try:
+        report_path = ci_report.generate_report()
+        logger.info(f"CI report written to: {report_path}")
+    except Exception as e:
+        logger.error(f"Failed generating CI report: {e}")
 
     if failures:
         logger.error(f"Completed with failures: {failures}")
