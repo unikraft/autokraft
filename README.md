@@ -210,9 +210,18 @@ If you're interested in contributing to this testing framework, please read our 
 
 Whether it's reporting bugs, suggesting features, or submitting pull requests - your input is appreciated!
 
+### Code Quality Standards
+
+This project enforces code quality using:
+- **Black** for code formatting
+- **isort** for import sorting
+- **Pylint** for code analysis
+- **Pre-commit hooks** for automatic checks
+
+See [QUICK_START_CODE_QUALITY.md](./QUICK_START_CODE_QUALITY.md) for setup instructions.
+
 ## 📄 License
 
 This project is licensed under the [BSD 3-Clause License](./COPYING.md).
 
 By contributing to this repository, you agree that your contributions will be licensed under the same terms.
-
