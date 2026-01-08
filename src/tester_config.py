@@ -3,11 +3,15 @@ This module provide the TesterConfig class to retrive and store tester configura
 """
 
 import itertools
+import os
 import sys
 
 import yaml
 
 from utils.base import Loggable
+
+# Get the directory where this script is located
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class TesterConfig(Loggable):
@@ -19,18 +23,34 @@ class TesterConfig(Loggable):
     Provide configurations for target definition: get_target_configs()
     """
 
-    def __init__(self, variants_file="src/variants.yaml", config_file="src/config.yaml"):
+    def __init__(self, variants_file=None, config_file=None):
         super().__init__()
+
+        # Use absolute paths based on script location if not provided
+        if variants_file is None:
+            variants_file = os.path.join(_SCRIPT_DIR, "variants.yaml")
+        if config_file is None:
+            config_file = os.path.join(_SCRIPT_DIR, "config.yaml")
+
         try:
             with open(variants_file, "r", encoding="utf8") as stream:
                 self.config = yaml.safe_load(stream)
-                with open(config_file, "r", encoding="utf8") as stream:
-                    self.config.update(yaml.safe_load(stream))
-                self.variants = self._generate_variants()
-                self.target_configs = []
-            
         except IOError:
-            self.logger.error(f"Error: Unable to open configuration file '{variants_file}'")
+            self.logger.error(f"Error: Unable to open variants file '{variants_file}'")
+            self.logger.error("Please ensure variants.yaml exists in the src directory.")
+            sys.exit(1)
+
+        try:
+            with open(config_file, "r", encoding="utf8") as stream:
+                config_data = yaml.safe_load(stream)
+                if config_data:
+                    self.config.update(config_data)
+        except IOError:
+            self.logger.warning(f"Warning: Unable to open config file '{config_file}'")
+            self.logger.warning("Using defaults. Copy config.yaml.template to config.yaml and configure it.")
+
+        self.variants = self._generate_variants()
+        self.target_configs = []
 
     def _generate_full_variants(self):
         """Generate all possible configuration variants.

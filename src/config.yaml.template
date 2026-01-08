@@ -1,2 +1,15 @@
+# Unikraft workspace base directory
+# This should be the PARENT directory containing:
+#   - unikraft/     (Unikraft core source)
+#   - libs/         (Unikraft libraries)
+#   - apps/         (Unikraft applications like app-elfloader)
+#
+# Example structure:
+#   /home/user/unikraft-workspace/
+#   ├── unikraft/   <- Unikraft core
+#   ├── libs/       <- Libraries
+#   └── apps/       <- Applications
+#
+# In this case, set base to: /home/user/unikraft-workspace
 source:
-  base: /absolute/path/to/your/unikraft/root
+  base: /absolute/path/to/your/unikraft/workspace
