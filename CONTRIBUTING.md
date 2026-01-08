@@ -23,14 +23,79 @@ This repository contains a modular Python-based testing framework tailored for [
 
 1. Fork the repository.
 2. Create a new branch (`git checkout -b username/typeshort-description`).
-3. Commit your changes with a meaningful message.
-4. Push to your fork.
-5. Open a pull request against the `main` branch.
+3. Set up code quality tools (see below).
+4. Make your changes following our coding guidelines.
+5. Ensure all pre-commit checks pass.
+6. Commit your changes with a meaningful message.
+7. Push to your fork.
+8. Open a pull request against the `staging` branch.
 
 ## ✅ Coding Guidelines
 
+This project enforces strict code quality standards using automated tools. All contributions must adhere to these standards.
+
+### Code Style Standards
+
+We use three main tools to ensure consistent code quality:
+
+- **Black** (v25.1.0): Automatic code formatter with 100 character line limit
+- **isort** (v6.0.1): Import statement organizer (Black-compatible)
+- **Pylint** (v3.3.7): Static code analyzer and linter
+
+### Setting Up Code Quality Tools
+
+**First-time setup** (run once after cloning):
+
+```bash
+# Ensure you're in the virtual environment
+source .venv/bin/activate
+
+# Run the setup script
+./setup-pre-commit.sh
+```
+
+This installs pre-commit hooks that automatically check your code before each commit.
+
+### Before Committing
+
+Pre-commit hooks will automatically run on `git commit`. To manually check your code:
+
+```bash
+# Format all code
+make format
+
+# Run all checks
+make test
+
+# Or use pre-commit directly
+pre-commit run --all-files
+```
+
+### Manual Tool Usage
+
+```bash
+# Format code with Black
+black .
+
+# Sort imports
+isort .
+
+# Run Pylint
+pylint src/ overall_test.py
+```
+
+For detailed information about code style standards, see [CODE_STYLE.md](./CODE_STYLE.md).
+
+### General Guidelines
+
 - Keep your commits focused and clean.
-- Document your code appropriately.
+- Document your code appropriately (docstrings for public APIs).
+- Follow PEP 8 naming conventions (enforced by Pylint):
+  - Functions/variables: `snake_case`
+  - Classes: `PascalCase`
+  - Constants: `UPPER_CASE`
+- Maximum line length: 100 characters
+- All code must pass Black, isort, and Pylint checks before merging.
 
 ## 📄 License
 

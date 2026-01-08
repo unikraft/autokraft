@@ -1,6 +1,59 @@
 [tool.black]
 line-length = 100
+target-version = ['py310', 'py311', 'py312', 'py313']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
 
 [tool.isort]
 profile = "black"
 line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip_gitignore = true
+
+[tool.pylint.main]
+py-version = "3.13"
+ignore = ["CVS"]
+jobs = 0
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.messages_control]
+disable = [
+    "raw-checker-failed",
+    "bad-inline-option",
+    "locally-disabled",
+    "file-ignored",
+    "suppressed-message",
+    "useless-suppression",
+    "deprecated-pragma",
+    "use-implicit-booleaness-not-comparison-to-string",
+    "use-implicit-booleaness-not-comparison-to-zero",
+    "use-symbolic-message-instead",
+    "possibly-unused-variable",
+    "too-many-locals",
+    "logging-fstring-interpolation",
+    "missing-module-docstring",
+    "missing-function-docstring",
+    "missing-class-docstring",
+    "fixme",
+    "import-error"
+]

@@ -1,0 +1,42 @@
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-json
+        exclude: '^scripts/tpl_.*\.json$'
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: mixed-line-ending
+
+  # Black - Code formatter
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        args: [--config=pyproject.toml]
+
+  # isort - Import sorter
+  - repo: https://github.com/PyCQA/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        args: [--settings-path=pyproject.toml]
+
+  # Pylint - Code linter
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.3.7
+    hooks:
+      - id: pylint
+        args: [--rcfile=.pylintrc]
+        additional_dependencies:
+          - pylint==3.3.7
