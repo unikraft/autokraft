@@ -314,6 +314,16 @@ def main():
 
         logger.info(f"Generated {len(targets)} target configuration(s) successfully.")
 
+        if len(targets) == 0:
+            logger.warning("No target configurations were generated!")
+            logger.warning("Possible causes:")
+            logger.warning("  - Runtime package not found (run 'kraft pkg info <runtime>' to verify)")
+            logger.warning("  - No matching compilers/VMMs available on this system")
+            logger.warning("  - All variant combinations excluded by variants.yaml")
+            if a.is_example():
+                logger.warning(f"  - For examples: check that runtime '{a.config.get('runtime', 'unknown')}' exists")
+            logger.warning("Run with --verbose for more details.")
+
         # If example, then create the key target runtimes.
         if a.is_example():
             logger.info("Generating key target runtimes for example application.")

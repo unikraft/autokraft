@@ -2,6 +2,7 @@
 
 init_rootfs="{rootfs}"
 testing_rootfs="{init_dir}/.rootfs-for-testing"
+app_dir="{app_dir}"
 
 # If no root filesystem, exit.
 if test -z "$init_rootfs"; then
@@ -23,5 +24,11 @@ else
     cp -r "$init_rootfs"/* "$testing_rootfs"
 fi
 
+# Create target directory if it doesn't exist
+if test ! -d "$app_dir"; then
+    echo "Creating target directory: $app_dir"
+    mkdir -p "$app_dir"
+fi
+
 # Create CPIO archive to be used as the embedded initrd.
-{base}/unikraft/support/scripts/mkcpio {app_dir}/initrd.cpio "$testing_rootfs"
+{base}/unikraft/support/scripts/mkcpio "$app_dir/initrd.cpio" "$testing_rootfs"

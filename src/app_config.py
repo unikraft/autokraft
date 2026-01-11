@@ -109,6 +109,35 @@ class AppConfig(Loggable):
 
         return self.config["rootfs"]
 
+    def _get_targets_from_kraftfile(self, kraftfile_path):
+        """Get targets from a Kraftfile.
+
+        Parse the Kraftfile and extract targets from the 'targets' field.
+
+        Args:
+            kraftfile_path: Path to the Kraftfile to parse.
+
+        Returns:
+            List of (plat, arch) tuples, or empty list if no targets found.
+        """
+        try:
+            with open(kraftfile_path, "r", encoding="utf-8") as stream:
+                data = yaml.safe_load(stream)
+
+            if not data or "targets" not in data:
+                return []
+
+            targets = []
+            for t in data["targets"]:
+                if isinstance(t, str) and "/" in t:
+                    plat = t.split("/")[0]
+                    arch = t.split("/")[1]
+                    targets.append((plat, arch))
+            return targets
+        except Exception as e:
+            self.logger.debug(f"Failed to parse Kraftfile at {kraftfile_path}: {e}")
+            return []
+
     def _get_targets_from_runtime(self):
         """Get targets (as pair of plat and arch) from runtime package.
 
@@ -116,27 +145,66 @@ class AppConfig(Loggable):
         useful for examples, that don't specify targets in the `Kraftfile`.
         But they specify a runtime that specifies targets.
 
+        Falls back to reading the runtime's Kraftfile from the catalog if
+        kraft pkg info fails.
+
         Populate the self.config['targets'] array as array of (plat, arch)
         pairs.
         """
 
+        runtime_query = self.config["runtime"].split(":")[0].replace("/", ":")
+        self.logger.debug(f"Querying kraft pkg info for runtime: {runtime_query}")
+
         kraft_proc = subprocess.Popen(
-            ["kraft", "pkg", "info", "--log-level", "panic", self.config["runtime"].split(":")[0].replace("/", ":"), "-o", "json"],
+            ["kraft", "pkg", "info", "--log-level", "panic", runtime_query, "-o", "json"],
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
-        jq_proc = subprocess.Popen(
-            ["jq", "-r", ".[] | .plat"], stdin=subprocess.PIPE, stdout=subprocess.PIPE
-        )
-        kraft_output, _ = kraft_proc.communicate()
-        jq_out, _ = jq_proc.communicate(kraft_output)
+        kraft_output, kraft_err = kraft_proc.communicate()
 
         targets = []
-        for full_plat in jq_out.decode().split("\n"):
-            if full_plat:
-                plat = full_plat.split("/")[0]
-                arch = full_plat.split("/")[1]
-                targets.append((plat, arch))
-            self.config["targets"] = targets
+
+        if kraft_proc.returncode != 0:
+            self.logger.debug(f"kraft pkg info failed for '{runtime_query}': {kraft_err.decode().strip()}")
+        elif not kraft_output.strip():
+            self.logger.debug(f"kraft pkg info returned empty output for '{runtime_query}'")
+        else:
+            self.logger.debug(f"kraft pkg info output: {kraft_output.decode()[:500]}")
+
+            jq_proc = subprocess.Popen(
+                ["jq", "-r", ".[] | .plat"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            jq_out, jq_err = jq_proc.communicate(kraft_output)
+
+            if jq_proc.returncode == 0:
+                for full_plat in jq_out.decode().split("\n"):
+                    if full_plat and "/" in full_plat:
+                        plat = full_plat.split("/")[0]
+                        arch = full_plat.split("/")[1]
+                        targets.append((plat, arch))
+
+        # Fallback: Try to read targets from the runtime's Kraftfile in the catalog
+        if not targets:
+            self.logger.debug("kraft pkg info did not return targets, trying catalog fallback...")
+            runtime_name = self.config["runtime"].split(":")[0]  # e.g., "node/21"
+
+            # Try to construct the catalog runtime path from app_dir
+            if "catalog" in self.app_dir:
+                catalog_base = self.app_dir.split("catalog")[0] + "catalog/library"
+                runtime_kraftfile = os.path.join(catalog_base, runtime_name, "Kraftfile")
+
+                if os.path.exists(runtime_kraftfile):
+                    self.logger.info(f"Reading targets from catalog runtime Kraftfile: {runtime_kraftfile}")
+                    targets = self._get_targets_from_kraftfile(runtime_kraftfile)
+                else:
+                    self.logger.debug(f"Runtime Kraftfile not found at: {runtime_kraftfile}")
+
+        if not targets:
+            self.logger.warning(f"No targets found for runtime '{runtime_query}'.")
+            self.logger.warning("Ensure the runtime package exists or the catalog contains the runtime Kraftfile.")
+
+        self.config["targets"] = targets
+        self.logger.debug(f"Retrieved targets from runtime: {targets}")
 
     def _parse_user_config(self, run_config_file):
         """Parse config.yaml file.
