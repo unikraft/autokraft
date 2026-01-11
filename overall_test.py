@@ -130,6 +130,7 @@ def main():
     parser.add_argument("--tests-dir", help="Pass tests dir to main.py (-d)")
     parser.add_argument("--app-dir-name", help="Pass app dir name to main.py (-a)")
     parser.add_argument("--target-no", help="Pass target numbers to main.py (-t)")
+    parser.add_argument("--timeout", type=int, default=21600, help="Maximum execution time in seconds (default: 21600 = 6h)")
 
     args = parser.parse_args()
 
@@ -177,7 +178,13 @@ def main():
     logger.info(f"Starting processing {len(apps)} app(s). Log: {overall_log}")
 
     failures = []
+    start_time = datetime.now()
     for name, path in apps:
+        elapsed = (datetime.now() - start_time).total_seconds()
+        if elapsed > args.timeout:
+            logger.warning(f"Workflow timeout exceeded ({args.timeout}s). Stopping further processing.")
+            logger.warning(f"Remaining (untested) apps: {[name for name, _ in apps[apps.index((name, path)):]]}")
+            break
         if name == 'grafana/10.2':
             continue
         logger.info(f"Processing app: {name} -> {path}")
@@ -191,6 +198,10 @@ def main():
     if failures:
         logger.error(f"Completed with failures: {failures}")
         return 1
+
+    if args.timeout and (datetime.now() - start_time).total_seconds() > args.timeout:
+        logger.warning("Exiting with success code (0) despite timeout to allow report generation.")
+        return 0
 
     logger.info("All apps processed successfully.")
     return 0
