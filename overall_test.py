@@ -18,7 +18,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime
-
+from datetime import timedelta
 
 def find_catalog_library(base_dir: str) -> str:
     """Return absolute path to catalog/library. Try provided base_dir, then
@@ -130,6 +130,7 @@ def main():
     parser.add_argument("--tests-dir", help="Pass tests dir to main.py (-d)")
     parser.add_argument("--app-dir-name", help="Pass app dir name to main.py (-a)")
     parser.add_argument("--target-no", help="Pass target numbers to main.py (-t)")
+    parser.add_argument("--max-hours", type=float, default=6, help="Maximun workflow duration in hours (default: 6)")
 
     args = parser.parse_args()
 
@@ -175,13 +176,22 @@ def main():
     logger.addHandler(fh)
 
     logger.info(f"Starting processing {len(apps)} app(s). Log: {overall_log}")
-
+    MAX_WORKFLOW_DURATION = timedelta(hours=args.max_hours)
+    start_time = datetime.now()
     failures = []
-    for name, path in apps:
+    skipped = []
+    for idx, (name,path) in enumerate(apps):
+        elapsed = datetime.now() - start_time
+        if elapsed >= MAX_WORKFLOW_DURATION:
+            logger.warning("Workflow time limit reached. Skipping remaining apps.")
+            remaining = apps[idx:]
+            skipped.extend([n for n, _ in remaining])
+            break
         if name == 'grafana/10.2':
             continue
         logger.info(f"Processing app: {name} -> {path}")
         ok = run_for_app(main_py, path, args, logger)
+
         if not ok:
             logger.error(f"App failed: {name}")
             failures.append(name)
@@ -190,11 +200,16 @@ def main():
 
     if failures:
         logger.error(f"Completed with failures: {failures}")
+
+    if skipped:
+        logger.warning(f"Skipped due to time limit: {skipped}")
+
+    if failures:
         return 1
+    
+    logger.info("Workflow completed. ")
+    return 0 
 
-    logger.info("All apps processed successfully.")
-    return 0
-
-
+    
 if __name__ == "__main__":
     sys.exit(main())
