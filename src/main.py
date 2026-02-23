@@ -22,6 +22,7 @@ from utils.file_utils import copy_common
 from utils.logger import setup_logger
 from utils.setup_session import SessionSetup
 from constants import set_tests_folder, get_tests_folder, set_app_folder, get_app_folder
+from pathlib import Path
 
 
 def generate_target_configs(tester_config, app_config, system_config, session):
@@ -259,13 +260,17 @@ def main():
             runtime_name = a.config['runtime'].split(":")[0]
             
             # Extract catalog base path from app_dir
-            app_dir_parts = app_dir.split('catalog')
-            if len(app_dir_parts) > 1:
-                catalog_base_path = app_dir_parts[0] + 'catalog/library'
-                catalog_runtime_path = os.path.join(catalog_base_path, runtime_name)
-            else:
-                logger.error(f"Could not extract catalog path from app_dir: {app_dir}")
-                sys.exit(1)
+            app_path = Path(app_dir).resolve()
+            catalog_runtime_path = None
+            for parent in app_path.parents:
+                if parent.name == "catalog":
+                   catalog_runtime_path = parent / "library" / runtime_name
+                   break
+            
+
+            if catalog_runtime_path is None:
+               logger.error(f"Could not extract catalog path from app_dir: {app_dir}")
+               sys.exit(1) 
             logger.info(f"Catalog runtime path: {catalog_runtime_path}")
             new_session_script = os.path.join(cwd, "scripts", "utils", "new_session.sh")
             if os.path.exists(new_session_script):
@@ -280,6 +285,7 @@ def main():
                     sys.exit(1)
             else:
                 logger.warning(f"New session script not found: {new_session_script}")
+            
             # TODO: Also remove this non persistent session before exiting (from the logs?)
         else:
             logger.info("Runtimes already exist, skipping generation.")
