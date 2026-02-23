@@ -1,6 +1,29 @@
 [tool.black]
 line-length = 100
+target-version = ["py310"]
 
 [tool.isort]
 profile = "black"
 line_length = 100
+known_first_party = ["src"]
+skip_gitignore = true
+
+[tool.pylint.main]
+source-roots = ["src"]
+ignore-paths = ["tests", "scripts"]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint."messages control"]
+disable = [
+    "C0114",  # missing-module-docstring (allow for small utility files)
+    "C0115",  # missing-class-docstring
+    "R0903",  # too-few-public-methods
+    "R0913",  # too-many-arguments
+    "W1203",  # logging-fstring-interpolation (f-strings are fine)
+]
+
+[tool.pylint.design]
+max-args = 8
+max-locals = 20
