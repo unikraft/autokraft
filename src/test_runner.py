@@ -461,7 +461,7 @@ class TestRunner(Loggable):
             self.logger.error(f"[✗] {error_message}")
             raise Exception(error_message)
 
-    def run_test(self) -> None:
+    def run_test(self, build_only: bool = False) -> None:
         """
         Run the test for the target setup.
 
@@ -480,6 +480,9 @@ class TestRunner(Loggable):
             build_success = self._test_target_build(self.target.build_config.kernel_path)
             # Update the build status in the test-app-config/build_report.csv
             self._update_build_report(self.target, build_return_code, build_success)
+        if build_only:
+           self.logger.info(f"[✓] Build-only mode: skipping run for target {self.target.id}")
+           return
         # WARNING: TODO: Update the condition after keeping runtime_kernel created by kraft fetched by oci registry 
         if build_return_code == 0 and build_success or (self.target.build_config.is_example and self.target.config['build']['build_tool'] == 'kraft'):
             self.logger.info(f"[✓] Build successful for target: {self.target.id}")

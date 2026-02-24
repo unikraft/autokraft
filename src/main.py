@@ -194,6 +194,12 @@ def parse_arguments():
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose output (debug level logs)"
     )
+    parser.add_argument(
+        "--build-only",
+        "-b",
+        action="store_true",
+        help="Only build without running tests",
+    )
 
     return parser.parse_args()
 
@@ -359,7 +365,7 @@ def main():
                 
             logger.info(f"Running target {test_no + 1} of {len(targets)}")
             runner = TestRunner(target_config, app_dir, session)
-            runner.run_test()
+            runner.run_test(build_only=args.build_only)
             tests_run += 1
             
         logger.info(f"Completed {tests_run} test(s) successfully.")
