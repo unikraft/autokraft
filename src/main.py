@@ -18,9 +18,9 @@ from target_setup import TargetSetup
 from test_runner import TestRunner
 from tester_config import TesterConfig
 from utils.cleanup import cleanup_folder
-from utils.create_runtime_kernel import create_examples_runtime
 from utils.file_utils import copy_common
 from utils.logger import setup_logger
+from utils.runtime_manager import ensure_runtime_kernels
 from utils.setup_session import SessionSetup
 
 
@@ -190,6 +190,14 @@ def parse_arguments():
         help="Only generate target configurations and exit without running tests",
     )
     parser.add_argument(
+        "--rebuild-runtime",
+        "-r",
+        dest="rebuild_runtime",
+        action="store_true",
+        help="Rebuild the runtime kernels of the selected targets even if they already exist "
+        "in runtime_kernels/ (only for example applications)",
+    )
+    parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose output (debug level logs)"
     )
 
@@ -243,47 +251,6 @@ def main():
         a = AppConfig(app_dir)
         s = SystemConfig()
 
-        # here we can generate the runtimes if not created yet
-        if a.config["runtime"] is not None:
-            # TODO: Check if runtimes already exist l:
-            # check if the runtime_kernel/a.config['runtime'].split(":")[0] directory is present or not
-
-            logger.info(f"Generating runtimes...{a.config['runtime']}")
-
-            # Call the new_session.sh script
-            cwd = os.getcwd()
-            # TODO: Later need to pass the specific runtime
-            # Currently its only creating base runtime.
-            runtime_name = a.config["runtime"].split(":")[0]
-
-            # Extract catalog base path from app_dir
-            app_dir_parts = app_dir.split("catalog")
-            if len(app_dir_parts) > 1:
-                catalog_base_path = app_dir_parts[0] + "catalog/library"
-                catalog_runtime_path = os.path.join(catalog_base_path, runtime_name)
-            else:
-                logger.error(f"Could not extract catalog path from app_dir: {app_dir}")
-                sys.exit(1)
-            logger.info(f"Catalog runtime path: {catalog_runtime_path}")
-            new_session_script = os.path.join(cwd, "scripts", "utils", "new_session.sh")
-            if os.path.exists(new_session_script):
-                try:
-                    result = subprocess.run(
-                        [new_session_script, catalog_runtime_path],
-                        check=True,
-                        text=True,
-                        capture_output=True,
-                    )
-                    logger.debug(f"New session script output: {result.stdout}")
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"New session script execution failed: {e}")
-                    logger.error(f"Error output: {e.stderr}")
-                    sys.exit(1)
-            else:
-                logger.warning(f"New session script not found: {new_session_script}")
-            # TODO: Also remove this non persistent session before exiting (from the logs?)
-        else:
-            logger.info("Runtimes already exist, skipping generation.")
         copy_common()
 
         if not a.is_example():
@@ -315,11 +282,28 @@ def main():
 
         logger.info(f"Generated {len(targets)} target configuration(s) successfully.")
 
-        # If example, then create the key target runtimes.
+        # Examples run on a runtime kernel: make sure the kernels of the selected targets
+        # exist in runtime_kernels/, generating only the missing ones.
         if a.is_example():
-            logger.info("Generating key target runtimes for example application.")
-            runtime_name = a.config["runtime"].split(":")[0]
-            create_examples_runtime(selected_targets, targets, runtime_name)
+            try:
+                ensure_runtime_kernels(
+                    app_dir,
+                    a.config["runtime"],
+                    targets,
+                    selected_targets,
+                    force=args.rebuild_runtime,
+                )
+            except (ValueError, FileNotFoundError) as e:
+                logger.error(f"Runtime setup failed: {e}")
+                sys.exit(1)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Runtime generation failed: {e}")
+                # Only the generation step captures stderr; build errors are already in the log.
+                if e.stderr:
+                    logger.error(f"Error output: {e.stderr}")
+                sys.exit(1)
+        else:
+            logger.info("Application builds its own kernel, no runtime needed.")
 
         # Exit early if generate-only flag is set
         if args.generate_only:
