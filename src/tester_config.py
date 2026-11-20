@@ -255,17 +255,24 @@ class TesterConfig(Loggable):
                         continue
 
                     for vmm in vmm_list:
-                        _config["run"] = {}
-                        _config["run"]["vmm"] = vmm
-                        _config["run"]["runs"] = []
+                        target_config = {
+                        "build": _config["build"].copy(),
+                        "base": _config["base"],
+                        "run": {
+                            "vmm": vmm,
+                            "runs": []
+                            }
+                        }
+
                         for r in v["runs"]:
                             for rt in run_tools:
                                 if rt == r["run_tool"]:
                                     if r["hypervisor"] == "none" or (
                                         r["hypervisor"] != "none" and arch == sys_arch
                                     ):
-                                        _config["run"]["runs"].append(r)
-                        self.target_configs.append(_config)
+                                        target_config["run"]["runs"].append(r)
+
+                        self.target_configs.append(target_config)
 
     def get_target_configs(self):
         """Retrieve target configurations."""
