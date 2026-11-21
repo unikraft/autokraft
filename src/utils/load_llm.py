@@ -4,6 +4,9 @@ from typing import Optional
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 
+DEFAULT_PROVIDER = "groq"
+DEFAULT_MODEL = "openai/gpt-oss-120b"
+
 
 class LLMLoader:
     """
@@ -12,15 +15,15 @@ class LLMLoader:
 
     def __init__(
         self,
-        model_name: str = "llama-3.3-70b-versatile",
-        model_provider: str = "groq",
+        model_name: str = DEFAULT_MODEL,
+        model_provider: str = DEFAULT_PROVIDER,
         temperature: float = 0.05,
     ):
         """
         Initialize LLMLoader.
 
         Args:
-            model_name: Name of the model to load (default: "llama-3.3-70b-versatile")
+            model_name: Name of the model to load (default: "openai/gpt-oss-120b")
             model_provider: Provider for the model (default: "groq")
             temperature: Controls randomness in responses (0.0-1.0, default: 0.05)
         """
@@ -130,7 +133,7 @@ def get_default_model(temperature: float = 0.7):
         temperature: Temperature setting for the model (default: 0.7)
 
     Returns:
-        Default Groq Llama3 model
+        Default model (DEFAULT_PROVIDER / DEFAULT_MODEL)
     """
     loader = LLMLoader(temperature=temperature)
     return loader.get_model()
