@@ -271,7 +271,9 @@ def main():
                 logger.info(f"Selected target numbers: {sorted([n+1 for n in selected_targets])}")
 
                 # Validate target numbers are within range
-                if selected_targets and max(selected_targets) >= len(targets):
+                if selected_targets and (
+                    min(selected_targets) < 0 or max(selected_targets) >= len(targets)
+                ):
                     logger.error(f"Target number out of range. Available targets: 1-{len(targets)}")
                     sys.exit(1)
             except ValueError as e:
@@ -293,7 +295,7 @@ def main():
                     selected_targets,
                     force=args.rebuild_runtime,
                 )
-            except (ValueError, FileNotFoundError) as e:
+            except (ValueError, FileNotFoundError, RuntimeError) as e:
                 logger.error(f"Runtime setup failed: {e}")
                 sys.exit(1)
             except subprocess.CalledProcessError as e:

@@ -102,6 +102,22 @@ class KernelDirTestCase(unittest.TestCase):
                 stream.write("kernel")
 
 
+class TestValidateSelectedTargets(KernelDirTestCase):
+    """validate_selected_targets() rejects indexes outside the target list."""
+
+    def test_valid_indexes(self):
+        rm.validate_selected_targets(self.targets, {0, 1, 2})
+
+    def test_negative_index(self):
+        # `-t 0` is parsed to -1, which Python would accept as the last target.
+        with self.assertRaises(ValueError):
+            rm.validate_selected_targets(self.targets, {-1})
+
+    def test_index_too_large(self):
+        with self.assertRaises(ValueError):
+            rm.validate_selected_targets(self.targets, {3})
+
+
 class TestGetMissingRuntimeKernels(KernelDirTestCase):
     """get_missing_runtime_kernels() only looks at the selected targets."""
 
@@ -134,8 +150,13 @@ class TestEnsureRuntimeKernels(KernelDirTestCase):
         create.assert_not_called()
         cleanup.assert_not_called()
 
+    def build_kernels(self, create):
+        """Make the create_examples_runtime() mock build the kernels of the selected targets."""
+        create.side_effect = lambda selected, *_: self.create_kernels(*selected)
+
     def test_generates_when_a_kernel_is_missing(self, catalog, generate, create, cleanup):
         self.create_kernels(0, 2)
+        self.build_kernels(create)
         result = rm.ensure_runtime_kernels("/app", "node/18:local", self.targets, [0, 1, 2])
         self.assertTrue(result)
         catalog.assert_called_once_with("/app", "node/18")
@@ -166,13 +187,38 @@ class TestEnsureRuntimeKernels(KernelDirTestCase):
 
     def test_force_rebuilds_only_selected_kernels(self, _catalog, generate, create, cleanup):
         self.create_kernels(0, 1, 2)
+        mtimes = [os.path.getmtime(path) for path in self.kernels]
+        deleted = []
+        create.side_effect = lambda selected, *_: (
+            deleted.extend(i for i in selected if not os.path.exists(self.kernels[i])),
+            self.create_kernels(*selected),
+        )
         result = rm.ensure_runtime_kernels("/app", "node/18:local", self.targets, [1], force=True)
         self.assertTrue(result)
-        self.assertTrue(os.path.exists(self.kernels[0]))
-        self.assertFalse(os.path.exists(self.kernels[1]))
-        self.assertTrue(os.path.exists(self.kernels[2]))
+        # Only the selected kernel was deleted before the build, the others were untouched.
+        self.assertEqual(deleted, [1])
+        self.assertEqual(os.path.getmtime(self.kernels[0]), mtimes[0])
+        self.assertEqual(os.path.getmtime(self.kernels[2]), mtimes[2])
         generate.assert_called_once()
         create.assert_called_once_with([1], self.targets, "node/18")
+        cleanup.assert_called_once_with()
+
+    def test_invalid_target_deletes_nothing(self, catalog, generate, create, cleanup):
+        self.create_kernels(0, 1, 2)
+        with self.assertRaises(ValueError):
+            rm.ensure_runtime_kernels("/app", "node/18:local", self.targets, {-1}, force=True)
+        for path in self.kernels:
+            self.assertTrue(os.path.exists(path))
+        catalog.assert_not_called()
+        generate.assert_not_called()
+        create.assert_not_called()
+        cleanup.assert_not_called()
+
+    def test_fails_when_kernel_still_missing(self, _catalog, _generate, create, cleanup):
+        # create_examples_runtime() returns normally, but did not build the kernel.
+        with self.assertRaises(RuntimeError):
+            rm.ensure_runtime_kernels("/app", "node/18:local", self.targets, [0])
+        create.assert_called_once()
         cleanup.assert_called_once_with()
 
 
