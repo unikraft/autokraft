@@ -203,6 +203,37 @@ The framework supports the following optional arguments:
   > Target numbers use 1-based indexing (first target is 1, not 0).
   > If no target numbers are specified, all available targets will be tested.
 
+- `-r, --rebuild-runtime`:
+  Rebuild the runtime kernels of the selected targets even if they already exist in `runtime_kernels/`.
+  Use it after changing Unikraft or the runtime application.
+  It only affects example applications (see [Runtime Kernels](#runtime-kernels)).
+
+  ```console
+  python src/main.py /absolute/path/to/catalog/examples/httpserver-nodejs18 -r
+  ```
+
+### Runtime Kernels
+
+Example applications such as `catalog/examples/httpserver-nodejs18` don't build their own kernel.
+They run on a runtime from `catalog/library`, chosen by the `runtime:` entry in their `Kraftfile`; `node:18`, for example, maps to `catalog/library/node/18`.
+
+Before testing an example, the framework checks that each selected target has its runtime kernel in `runtime_kernels/<runtime>/`:
+
+1. If all the kernels exist, the framework reuses them and generates nothing.
+1. If some are missing, it generates the runtime configurations in `.runtime_tests/` and `.runtime_app/` and builds only the missing kernels.
+   It removes both temporary directories at the end, including after an error or `Ctrl+C`.
+
+To force a rebuild, pass `--rebuild-runtime` or delete the kernel files from `runtime_kernels/<runtime>/`.
+
+### Running the Unit Tests
+
+The unit tests need only the Python standard library.
+Run them from the repository root:
+
+```console
+python -m unittest discover -s tests -v
+```
+
 ## 🤝 Contributing
 
 We welcome contributions from the community!

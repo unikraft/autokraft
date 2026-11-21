@@ -11,17 +11,17 @@ import sys
 
 from app_config import AppConfig
 from build_setup import BuildSetup
+from constants import get_app_folder, get_tests_folder, set_app_folder, set_tests_folder
 from run_setup import RunSetup
 from system_config import SystemConfig
 from target_setup import TargetSetup
 from test_runner import TestRunner
 from tester_config import TesterConfig
 from utils.cleanup import cleanup_folder
-from utils.create_runtime_kernel import create_examples_runtime
 from utils.file_utils import copy_common
 from utils.logger import setup_logger
+from utils.runtime_manager import ensure_runtime_kernels
 from utils.setup_session import SessionSetup
-from constants import set_tests_folder, get_tests_folder, set_app_folder, get_app_folder
 
 
 def generate_target_configs(tester_config, app_config, system_config, session):
@@ -89,9 +89,7 @@ def initialize_environment(app_dir: str, tests_dir: str = "", app_folder: str = 
             print(setup_args)
             if app_folder != "" and app_folder is not None:
                 setup_args.append(app_folder)
-            result = subprocess.run(
-                setup_args, check=True, text=True, capture_output=True
-            )
+            result = subprocess.run(setup_args, check=True, text=True, capture_output=True)
             logger.debug(f"Setup output: {result.stdout}")
         else:
             logger.warning(f"Setup script not found: {setup_script}")
@@ -108,39 +106,39 @@ def initialize_environment(app_dir: str, tests_dir: str = "", app_folder: str = 
 
 def parse_target_numbers(target_arg):
     """Parse target numbers from various input formats.
-    
+
     Supports:
     - Comma separated: "1,3,5"
-    - Space separated: "1 3 5" 
+    - Space separated: "1 3 5"
     - Ranges: "1:5" or "1-5"
     - Mixed: "1,3:5,7"
-    
+
     Args:
         target_arg: String containing target numbers in supported formats
-        
+
     Returns:
         set: Set of target numbers (0-based indexing)
     """
     if not target_arg:
         return set()
-    
+
     target_numbers = set()
-    
+
     # Split by comma first to handle mixed formats
-    parts = target_arg.replace(' ', ',').split(',')
-    
+    parts = target_arg.replace(" ", ",").split(",")
+
     for part in parts:
         part = part.strip()
         if not part:
             continue
-            
+
         # Handle range notation (: or -)
-        if ':' in part or '-' in part:
-            separator = ':' if ':' in part else '-'
+        if ":" in part or "-" in part:
+            separator = ":" if ":" in part else "-"
             try:
                 start, end = part.split(separator, 1)
                 start_num = int(start.strip()) - 1  # Convert to 0-based
-                end_num = int(end.strip()) - 1      # Convert to 0-based
+                end_num = int(end.strip()) - 1  # Convert to 0-based
                 if start_num <= end_num:
                     target_numbers.update(range(start_num, end_num + 1))
             except ValueError:
@@ -151,7 +149,7 @@ def parse_target_numbers(target_arg):
                 target_numbers.add(int(part.strip()) - 1)  # Convert to 0-based
             except ValueError:
                 raise ValueError(f"Invalid target number: {part}")
-    
+
     return target_numbers
 
 
@@ -190,6 +188,14 @@ def parse_arguments():
         "-g",
         action="store_true",
         help="Only generate target configurations and exit without running tests",
+    )
+    parser.add_argument(
+        "--rebuild-runtime",
+        "-r",
+        dest="rebuild_runtime",
+        action="store_true",
+        help="Rebuild the runtime kernels of the selected targets even if they already exist "
+        "in runtime_kernels/ (only for example applications)",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose output (debug level logs)"
@@ -245,44 +251,6 @@ def main():
         a = AppConfig(app_dir)
         s = SystemConfig()
 
-        # here we can generate the runtimes if not created yet
-        if a.config["runtime"] is not None:
-            # TODO: Check if runtimes already exist l: 
-            # check if the runtime_kernel/a.config['runtime'].split(":")[0] directory is present or not
-
-            logger.info(f"Generating runtimes...{a.config['runtime']}")
-
-            # Call the new_session.sh script
-            cwd = os.getcwd()
-            # TODO: Later need to pass the specific runtime
-            # Currently its only creating base runtime.
-            runtime_name = a.config['runtime'].split(":")[0]
-            
-            # Extract catalog base path from app_dir
-            app_dir_parts = app_dir.split('catalog')
-            if len(app_dir_parts) > 1:
-                catalog_base_path = app_dir_parts[0] + 'catalog/library'
-                catalog_runtime_path = os.path.join(catalog_base_path, runtime_name)
-            else:
-                logger.error(f"Could not extract catalog path from app_dir: {app_dir}")
-                sys.exit(1)
-            logger.info(f"Catalog runtime path: {catalog_runtime_path}")
-            new_session_script = os.path.join(cwd, "scripts", "utils", "new_session.sh")
-            if os.path.exists(new_session_script):
-                try:
-                    result = subprocess.run(
-                        [new_session_script, catalog_runtime_path], check=True, text=True, capture_output=True
-                    )
-                    logger.debug(f"New session script output: {result.stdout}")
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"New session script execution failed: {e}")
-                    logger.error(f"Error output: {e.stderr}")
-                    sys.exit(1)
-            else:
-                logger.warning(f"New session script not found: {new_session_script}")
-            # TODO: Also remove this non persistent session before exiting (from the logs?)
-        else:
-            logger.info("Runtimes already exist, skipping generation.")
         copy_common()
 
         if not a.is_example():
@@ -301,9 +269,11 @@ def main():
             try:
                 selected_targets = parse_target_numbers(args.target_numbers)
                 logger.info(f"Selected target numbers: {sorted([n+1 for n in selected_targets])}")
-                
+
                 # Validate target numbers are within range
-                if selected_targets and max(selected_targets) >= len(targets):
+                if selected_targets and (
+                    min(selected_targets) < 0 or max(selected_targets) >= len(targets)
+                ):
                     logger.error(f"Target number out of range. Available targets: 1-{len(targets)}")
                     sys.exit(1)
             except ValueError as e:
@@ -314,12 +284,28 @@ def main():
 
         logger.info(f"Generated {len(targets)} target configuration(s) successfully.")
 
-        # If example, then create the key target runtimes.
+        # Examples run on a runtime kernel: make sure the kernels of the selected targets
+        # exist in runtime_kernels/, generating only the missing ones.
         if a.is_example():
-            logger.info("Generating key target runtimes for example application.")
-            runtime_name = a.config['runtime'].split(":")[0]
-            create_examples_runtime(selected_targets, targets, runtime_name)
-
+            try:
+                ensure_runtime_kernels(
+                    app_dir,
+                    a.config["runtime"],
+                    targets,
+                    selected_targets,
+                    force=args.rebuild_runtime,
+                )
+            except (ValueError, FileNotFoundError, RuntimeError) as e:
+                logger.error(f"Runtime setup failed: {e}")
+                sys.exit(1)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Runtime generation failed: {e}")
+                # Only the generation step captures stderr; build errors are already in the log.
+                if e.stderr:
+                    logger.error(f"Error output: {e.stderr}")
+                sys.exit(1)
+        else:
+            logger.info("Application builds its own kernel, no runtime needed.")
 
         # Exit early if generate-only flag is set
         if args.generate_only:
@@ -347,7 +333,6 @@ def main():
                         logger.error(f"Failed to copy log file {file_name}: {e}")
         else:
             logger.warning(f"Tests directory not found: {tests_dir}")
-        
 
         # Run tests for selected or all targets
         tests_run = 0
@@ -356,17 +341,18 @@ def main():
             if selected_targets is not None and test_no not in selected_targets:
                 logger.debug(f"Skipping target {test_no + 1}")
                 continue
-                
+
             logger.info(f"Running target {test_no + 1} of {len(targets)}")
             runner = TestRunner(target_config, app_dir, session)
             runner.run_test()
             tests_run += 1
-            
+
         logger.info(f"Completed {tests_run} test(s) successfully.")
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     sys.exit(main())

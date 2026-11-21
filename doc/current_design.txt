@@ -95,6 +95,18 @@ system capabilities.
     3. Create run configurations
     4. Setup filesystem requirements
 
+5.4. Runtime Kernels (example applications only)
+    Implemented in src/utils/runtime_manager.py, called from main.py after the
+    selected targets are known.
+    1. For each selected target, check if its kernel exists in
+       runtime_kernels/<runtime>/<kernel_name> (build_config.kernel_path)
+    2. If all kernels exist (and --rebuild-runtime is not set), skip generation
+    3. Otherwise, run main.py in generate-only mode on catalog/library/<runtime>,
+       in .runtime_tests/ and .runtime_app/
+    4. Build the missing kernels (create_examples_runtime) and move them to
+       runtime_kernels/<runtime>/
+    5. Always remove .runtime_tests/ and .runtime_app/, also on error or Ctrl+C
+
 6. File Structure
 ----------------
 6.1. Configuration Files
